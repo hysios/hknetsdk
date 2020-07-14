@@ -46,3 +46,17 @@ func NTEx2Time(nt NET_DVR_TIME_EX) time.Time {
 		time.Local,
 	)
 }
+
+func NTExV2Time(nt NET_DVR_TIME_V30) time.Time {
+
+	return time.Date(
+		int(nt.ST_wYear),
+		time.Month(nt.ST_byMonth),
+		int(nt.ST_byDay),
+		int(nt.ST_byHour),
+		int(nt.ST_byMinute),
+		int(nt.ST_bySecond),
+		int(nt.ST_wMilliSec)*1000000,
+		time.Local,
+	)
+}
