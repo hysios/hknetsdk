@@ -1,6 +1,7 @@
 package netsdk
 
 import (
+	"log"
 	"sync"
 	"unsafe"
 )
@@ -49,6 +50,7 @@ func (cli *Client) Subscribe(kind AlarmKind, fn MesasgeCallBackFunc) error {
 	if err != nil {
 		return err
 	}
+	log.Printf("kind %v", kind)
 	cli.msgCb = fn
 	cli.alarmHandle = handle
 	return nil

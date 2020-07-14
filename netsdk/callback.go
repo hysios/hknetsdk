@@ -22,8 +22,10 @@ func export_MessageCallabck(cmd int, alarm *C.NET_DVR_ALARMER, pBuf *C.char, l C
 	var (
 		pAlarm *NET_DVR_ALARMER
 		client *Client
+		ok     bool
 	)
 	pAlarm = (*NET_DVR_ALARMER)(unsafe.Pointer(alarm))
+	log.Printf("userdata %d", userData)
 
 	if userData == 0 {
 		return
@@ -31,7 +33,9 @@ func export_MessageCallabck(cmd int, alarm *C.NET_DVR_ALARMER, pBuf *C.char, l C
 
 	if pAlarm.ST_byUserIDValid > 0 {
 		clientsLock.Lock()
-		client = clientsMap[int64(pAlarm.ST_lUserID)]
+		if client, ok = clientsMap[int64(pAlarm.ST_lUserID)]; !ok {
+			log.Printf("can;t get client user id %d", pAlarm.ST_lUserID)
+		}
 		clientsLock.Unlock()
 	}
 
