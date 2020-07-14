@@ -1,15 +1,27 @@
 package netsdk
 
 import (
+	"sync"
 	"unsafe"
-
-	"github.com/yudai/pp"
 )
 
 type Command int
 
 type Alarm struct {
 }
+
+type Client struct {
+	LoginID     int64
+	DeviceInfo  NET_DVR_DEVICEINFO_V30
+	alarmHandle int
+	msgCb       MesasgeCallBackFunc
+}
+
+var (
+	clientsMap  = make(map[int64]*Client)
+	clientsLock sync.Mutex
+)
+
 type MessageFunc func(cmd Command, alarm Alarm, msg string)
 
 func (cli *Client) StartListen(cb MessageFunc) error {
@@ -29,7 +41,7 @@ func (cli *Client) DeviceAbility() ([]DeviceAbility, error) {
 
 type AlarmKind int
 
-func (cli *Client) Subscribe(kind AlarmKind) error {
+func (cli *Client) Subscribe(kind AlarmKind, fn MesasgeCallBackFunc) error {
 	var param = NET_DVR_SETUPALARM_PARAM{
 		ST_dwSize: uint32(unsafe.Sizeof(NET_DVR_SETUPALARM_PARAM{})),
 	}
@@ -37,7 +49,7 @@ func (cli *Client) Subscribe(kind AlarmKind) error {
 	if err != nil {
 		return err
 	}
-	pp.Print(param)
+	cli.msgCb = fn
 	cli.alarmHandle = handle
 	return nil
 }

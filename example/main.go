@@ -16,7 +16,11 @@ import (
 	"github.com/hysios/hknetsdk/netsdk"
 	"github.com/kr/pretty"
 )
-import "path"
+import (
+	"path"
+
+	"github.com/yudai/pp"
+)
 
 var (
 	addr     = flag.String("addr", "192.168.1.64:8000", "connect address")
@@ -41,11 +45,16 @@ func main() {
 	client, err := netsdk.Login(*addr, *user, *password)
 	log.Printf("%v %s", client, err)
 	log.Printf("serial: %s\n", client.DeviceInfo.ST_sSerialNumber[:])
+	pp.Printf("deviceinfo %v", client.DeviceInfo)
 	var ch = make(chan bool)
 
 	netsdk.SetReconnect(30*time.Second, true)
 
-	if err := netsdk.SetMessageCallback(func(cmd netsdk.CommAlarm, alarm *netsdk.NET_DVR_ALARMER, info interface{}) {
+	if err := netsdk.SetMessageCallback(nil); err != nil {
+		log.Fatalf("set mesasge callback error %s", err)
+	}
+
+	if err := client.Subscribe(0, func(cmd netsdk.CommAlarm, cli *netsdk.Client, alarm *netsdk.NET_DVR_ALARMER, info interface{}) {
 		log.Printf("cmd 0x%0x", cmd)
 		log.Printf("SerialNumber %s", string(alarm.ST_sSerialNumber[:]))
 		log.Printf("DeviceNo %s", string(alarm.ST_sDeviceName[:]))
@@ -99,10 +108,6 @@ func main() {
 
 		log.Printf("info % #v", pretty.Formatter(info))
 	}); err != nil {
-		log.Fatalf("set mesasge callback error %s", err)
-	}
-
-	if err := client.Subscribe(0); err != nil {
 		log.Fatalf("subcribe client error %s", err)
 	}
 

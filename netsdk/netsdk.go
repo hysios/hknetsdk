@@ -114,12 +114,6 @@ func SetRecvTimeOut(timeout time.Duration) bool {
 // 	return nil, err
 // }
 
-type Client struct {
-	LoginID     int64
-	DeviceInfo  NET_DVR_DEVICEINFO_V30
-	alarmHandle int
-}
-
 func Login(addr string, user, pass string) (*Client, error) {
 	var (
 		cli       Client
@@ -138,6 +132,9 @@ func Login(addr string, user, pass string) (*Client, error) {
 	if handle < 0 {
 		return nil, Err(getLastErrorN())
 	}
+	clientsLock.Lock()
+	clientsMap[handle] = &cli
+	clientsLock.Unlock()
 
 	cli.LoginID = handle
 	return &cli, nil
@@ -145,10 +142,14 @@ func Login(addr string, user, pass string) (*Client, error) {
 
 func (cli *Client) Logout() error {
 	C.NET_DVR_Logout_V30(C.LONG(cli.LoginID))
+	clientsLock.Lock()
+	delete(clientsMap, cli.LoginID)
+	clientsLock.Unlock()
+
 	return Err(getLastErrorN())
 }
 
-type MesasgeCallBackFunc func(cmd CommAlarm, alarm *NET_DVR_ALARMER, info interface{})
+type MesasgeCallBackFunc func(cmd CommAlarm, client *Client, alarm *NET_DVR_ALARMER, info interface{})
 
 type MessageCallbackVisitor struct {
 	Callback MesasgeCallBackFunc

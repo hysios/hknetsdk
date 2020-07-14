@@ -19,11 +19,20 @@ import (
 
 //export export_MessageCallabck
 func export_MessageCallabck(cmd int, alarm *C.NET_DVR_ALARMER, pBuf *C.char, l C.DWORD, userData C.DWORD) {
-	var pAlarm *NET_DVR_ALARMER
+	var (
+		pAlarm *NET_DVR_ALARMER
+		client *Client
+	)
 	pAlarm = (*NET_DVR_ALARMER)(unsafe.Pointer(alarm))
 
 	if userData == 0 {
 		return
+	}
+
+	if pAlarm.ST_byUserIDValid > 0 {
+		clientsLock.Lock()
+		client = clientsMap[int64(pAlarm.ST_lUserID)]
+		clientsLock.Unlock()
 	}
 
 	v := pointer.Restore(unsafe.Pointer(uintptr(userData)))
@@ -41,7 +50,13 @@ func export_MessageCallabck(cmd int, alarm *C.NET_DVR_ALARMER, pBuf *C.char, l C
 			log.Printf("size %d == %d", unsafe.Sizeof(NET_DVR_TFS_ALARM{}), uint32(l))
 			// info := (*C.NET_DVR_TFS_ALARM)(unsafe.Pointer(pBuf))
 			C.memcpy(unsafe.Pointer(&tfsInfo), unsafe.Pointer(pBuf), C.ulong(infol))
-			visitor.Callback(ccmd, pAlarm, &tfsInfo)
+			if client != nil && client.msgCb != nil {
+				client.msgCb(ccmd, client, pAlarm, &tfsInfo)
+			}
+
+			if visitor.Callback != nil {
+				visitor.Callback(ccmd, client, pAlarm, &tfsInfo)
+			}
 		case CommGisinfoUpload:
 			var (
 				gisInfo = NET_DVR_GIS_UPLOADINFO{
@@ -50,7 +65,13 @@ func export_MessageCallabck(cmd int, alarm *C.NET_DVR_ALARMER, pBuf *C.char, l C
 			)
 			log.Printf("size %d == %d", unsafe.Sizeof(NET_DVR_GIS_UPLOADINFO{}), l)
 			C.memcpy(unsafe.Pointer(&gisInfo), unsafe.Pointer(pBuf), C.ulong(l))
-			visitor.Callback(ccmd, pAlarm, &gisInfo)
+			if client != nil && client.msgCb != nil {
+				client.msgCb(ccmd, client, pAlarm, &gisInfo)
+			}
+
+			if visitor.Callback != nil {
+				visitor.Callback(ccmd, client, pAlarm, &gisInfo)
+			}
 		case CommAlarmAidV41:
 		default:
 			log.Printf("cmd 0x%0X", cmd)
