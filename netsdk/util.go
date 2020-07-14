@@ -3,6 +3,7 @@ package netsdk
 import (
 	"bytes"
 	"io/ioutil"
+	"time"
 
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
@@ -31,4 +32,17 @@ func GbkToUtf8(s []byte) ([]byte, error) {
 		return nil, e
 	}
 	return d, nil
+}
+
+func NTEx2Time(nt NET_DVR_TIME_EX) time.Time {
+	return time.Date(
+		int(nt.ST_wYear),
+		time.Month(nt.ST_byMonth),
+		int(nt.ST_byDay),
+		int(nt.ST_byHour),
+		int(nt.ST_byMinute),
+		int(nt.ST_bySecond),
+		0,
+		time.Local,
+	)
 }
