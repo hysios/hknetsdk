@@ -25,7 +25,6 @@ func export_MessageCallabck(cmd int, alarm *C.NET_DVR_ALARMER, pBuf *C.char, l C
 		ok     bool
 	)
 	pAlarm = (*NET_DVR_ALARMER)(unsafe.Pointer(alarm))
-	log.Printf("userdata %d", userData)
 
 	if userData == 0 {
 		return
@@ -40,7 +39,6 @@ func export_MessageCallabck(cmd int, alarm *C.NET_DVR_ALARMER, pBuf *C.char, l C
 	}
 
 	v := pointer.Restore(unsafe.Pointer(uintptr(userData)))
-	log.Printf("v %v", v)
 	if visitor, ok := v.(MessageCallbackVisitor); ok {
 		ccmd := CommAlarm(cmd)
 
