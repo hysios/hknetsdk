@@ -18,7 +18,7 @@ import (
 )
 
 //export export_MessageCallabck
-func export_MessageCallabck(cmd int, alarm *C.NET_DVR_ALARMER, pBuf *C.char, l C.DWORD, userData C.DWORD) {
+func export_MessageCallabck(cmd int, alarm *C.NET_DVR_ALARMER, pBuf *C.char, l C.DWORD, userData C.long) {
 	var (
 		pAlarm *NET_DVR_ALARMER
 		client *Client
