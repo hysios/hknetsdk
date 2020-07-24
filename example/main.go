@@ -1,24 +1,24 @@
 package main
 
-import (
-	"C"
+import "C"
 
+import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"os"
+	"path"
+	"strings"
 	"time"
 	"unsafe"
 
-	"log"
-
+	"cuelang.org/go/pkg/strconv"
 	"github.com/hysios/hknetsdk/netsdk"
 	"github.com/kr/pretty"
-)
-import (
-	"path"
-
 	"github.com/yudai/pp"
 )
 
@@ -26,11 +26,12 @@ var (
 	addr     = flag.String("addr", "192.168.1.64:8000", "connect address")
 	user     = flag.String("user", "admin", "login username")
 	password = flag.String("pass", "adm89679005", "login password")
+	// deviceFile = flag.String("input", "", "devices file")
 )
 
 func main() {
 	flag.Parse()
-
+	var devices []DeviceConfig
 	if err := netsdk.Init(); err != nil {
 		log.Fatalf("init error %s", err)
 	}
@@ -38,17 +39,29 @@ func main() {
 	defer netsdk.Cleanup()
 	fmt.Println("Hello World!")
 
+	// if deviceFile != nil {
+	// 	f, err := os.Open(*deviceFile)
+	// 	if err != nil {
+	// 		log.Fatalf("open file error %s", *deviceFile)
+	// 	}
+	// 	defer f.Close()
+
+	// 	devices, err = readDevices(f)
+	// 	if err != nil {
+	// 		log.Fatalf("read devices error %s", *deviceFile)
+	// 	}
+	// }
+
 	netsdk.SetExceptionCallback(func(typ int, userData interface{}) bool {
 		return true
 	}, nil)
+	netsdk.SetReconnect(30*time.Second, true)
 
 	client, err := netsdk.Login(*addr, *user, *password)
 	log.Printf("%v %s", client, err)
 	log.Printf("serial: %s\n", client.DeviceInfo.ST_sSerialNumber[:])
 	pp.Printf("deviceinfo %v", client.DeviceInfo)
 	var ch = make(chan bool)
-
-	netsdk.SetReconnect(30*time.Second, true)
 
 	if err := netsdk.SetMessageCallback(nil); err != nil {
 		log.Fatalf("set mesasge callback error %s", err)
@@ -124,4 +137,36 @@ func main() {
 	// }
 	// defer msgServ.Stop()
 	<-ch
+}
+
+type DeviceConfig struct {
+	IP   string
+	Port int64
+	User string
+	Pass string
+}
+
+func readDevices(rd io.ReadCloser) ([]DeviceConfig, error) {
+	var (
+		s       = bufio.NewScanner(rd)
+		devices = make([]DeviceConfig, 0)
+	)
+	s.Split(bufio.ScanLines)
+
+	for s.Scan() {
+		var (
+			line     = s.Text()
+			sections = strings.Fields(line)
+			devCfg   DeviceConfig
+		)
+		if len(sections) >= 4 {
+			devCfg.IP = sections[0]
+			devCfg.Port, _ = strconv.ParseInt(sections[0], 10, 32)
+			devCfg.User = sections[3]
+			devCfg.Pass = sections[4]
+			devices = append(devices, devCfg)
+		}
+	}
+
+	return devices, nil
 }
