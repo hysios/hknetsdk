@@ -18,6 +18,7 @@ void CALLBACK MessageCallback(LONG lCommand, NET_DVR_ALARMER *pAlarmer, char *c,
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -211,4 +212,23 @@ func CloseAlarmChan(alarmHandle int) error {
 		return nil
 	}
 	return Err(getLastErrorN())
+}
+
+func GetDVRConfig(loginId int, cmd DVRGetSet, channel int) (interface{}, error) {
+
+	switch cmd {
+	case NetItcGetTriggercfg:
+		var (
+			cfg NET_ITC_TRIGGERCFG
+			l   uint
+		)
+
+		b := C.NET_DVR_GetDVRConfig(C.int(loginId), C.uint(cmd), C.int(channel), C.LPVOID(unsafe.Pointer(&cfg)), C.uint(unsafe.Sizeof(cfg)), (*C.uint)(unsafe.Pointer(&l)))
+		if b == 0 {
+			return nil, Err(getLastErrorN())
+		}
+		return &cfg, nil
+	default:
+		return nil, errors.New("nonimplement")
+	}
 }

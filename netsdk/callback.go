@@ -76,6 +76,40 @@ func export_MessageCallabck(cmd int, alarm *C.NET_DVR_ALARMER, pBuf *C.char, l C
 				visitor.Callback(ccmd, client, pAlarm, &gisInfo)
 			}
 		case CommAlarmAidV41:
+			log.Printf("cmd 0x%0X", cmd)
+			log.Printf("aid alarm")
+		case CommUploadPlateResult:
+			var (
+				infol       = unsafe.Sizeof(NET_DVR_TFS_ALARM{})
+				plateResult = NET_DVR_PLATE_RESULT{
+					ST_dwSize: uint32(unsafe.Sizeof(NET_DVR_PLATE_RESULT{})),
+				}
+			)
+			log.Printf("size %d == %d", unsafe.Sizeof(NET_DVR_PLATE_RESULT{}), l)
+			C.memcpy(unsafe.Pointer(&plateResult), unsafe.Pointer(pBuf), C.ulong(infol))
+			if client != nil && client.msgCb != nil {
+				client.msgCb(ccmd, client, pAlarm, &plateResult)
+			}
+
+			if visitor.Callback != nil {
+				visitor.Callback(ccmd, client, pAlarm, &plateResult)
+			}
+		case CommItsPlateResult:
+			var (
+				infol       = unsafe.Sizeof(NET_ITS_PLATE_RESULT{})
+				plateResult = NET_ITS_PLATE_RESULT{
+					ST_dwSize: uint32(unsafe.Sizeof(NET_ITS_PLATE_RESULT{})),
+				}
+			)
+			log.Printf("size %d == %d", unsafe.Sizeof(NET_ITS_PLATE_RESULT{}), l)
+			C.memcpy(unsafe.Pointer(&plateResult), unsafe.Pointer(pBuf), C.ulong(infol))
+			if client != nil && client.msgCb != nil {
+				client.msgCb(ccmd, client, pAlarm, &plateResult)
+			}
+
+			if visitor.Callback != nil {
+				visitor.Callback(ccmd, client, pAlarm, &plateResult)
+			}
 		default:
 			log.Printf("cmd 0x%0X", cmd)
 			log.Printf("alarm % #v", pretty.Formatter(pAlarm))

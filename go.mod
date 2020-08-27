@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	cuelang.org/go v0.2.1
+	github.com/fatih/structs v1.1.0
 	github.com/kr/pretty v0.2.0
 	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/mattn/go-pointer v0.0.0-20190911064623-a0a44394634f

@@ -44,8 +44,11 @@ type AlarmKind int
 
 func (cli *Client) Subscribe(kind AlarmKind, fn MesasgeCallBackFunc) error {
 	var param = NET_DVR_SETUPALARM_PARAM{
-		ST_dwSize: uint32(unsafe.Sizeof(NET_DVR_SETUPALARM_PARAM{})),
+		ST_dwSize:            uint32(unsafe.Sizeof(NET_DVR_SETUPALARM_PARAM{})),
+		ST_byAlarmInfoType:   1,
+		ST_byRetAlarmTypeV40: 1,
 	}
+
 	handle, err := SetSetupAlarmChan(int(cli.LoginID), &param)
 	if err != nil {
 		return err
@@ -58,4 +61,8 @@ func (cli *Client) Subscribe(kind AlarmKind, fn MesasgeCallBackFunc) error {
 
 func (cli *Client) StopSubscribe() error {
 	return CloseAlarmChan(cli.alarmHandle)
+}
+
+func (cli *Client) GetDVRConfig(cmd DVRGetSet, channel int) (interface{}, error) {
+	return GetDVRConfig(int(cli.LoginID), cmd, channel)
 }

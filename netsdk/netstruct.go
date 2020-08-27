@@ -8,6 +8,7 @@ package netsdk
 #include <stdlib.h>
 */
 import "C"
+import "unsafe"
 
 type (
 	LLONG = int64
@@ -492,4 +493,407 @@ type NET_DVR_TFS_ALARM struct {
 	ST_pXmlBuf                 *byte                    // XML报警信息指针,其XML对应到EventNotificationAlert XML Block
 	ST_byVehicleHeadTailStatus BYTE                     //车头车尾状态 0-保留 1-车头 2-车尾
 	ST_byRes                   [31]BYTE                 //保留
+}
+
+type NET_ITS_PLATE_RESULT struct {
+	ST_dwSize         DWORD // 结构长度
+	ST_dwMatchNo      DWORD // 匹配序号,由(车辆序号,数据类型,车道号)组成匹配码
+	ST_byGroupNum     BYTE  // 图片组数量（一辆过车相机多次抓拍的数量，代表一组图片的总数，用于延时匹配数据）
+	ST_byPicNo        BYTE  // 连拍的图片序号（接收到图片组数量后，表示接收完成;接收超时不足图片组数量时，根据需要保留或删除）
+	ST_bySecondCam    BYTE  // 是否第二相机抓拍（如远近景抓拍的远景相机，或前后抓拍的后相机，特殊项目中会用到）
+	ST_byFeaturePicNo BYTE  // 闯红灯电警，取第几张图作为特写图,0xff-表示不取
+	ST_byDriveChan    BYTE  // 触发车道号
+	ST_byVehicleType  BYTE  // 车辆类型，参考VTR_RESULT
+	ST_byDetSceneID   BYTE  // 检测场景号[1,4], IPC默认是0
+	//车辆属性，按位表示，0- 无附加属性(普通车)，bit1- 黄标车(类似年检的标志)，bit2- 危险品车辆，值：0- 否，1- 是
+	//该节点已不再使用,使用下面的byYellowLabelCar和byDangerousVehicles判断是否黄标车和危险品车
+	ST_byVehicleAttribute BYTE
+	ST_wIllegalType       WORD    // 违章类型采用国标定义
+	ST_byIllegalSubType   [8]BYTE // 违章子类型
+	ST_byPostPicNo        BYTE    // 违章时取第几张图片作为卡口图,0xff-表示不取
+	//通道号(有效，报警通道号和所在设备上传报警通道号一致，在后端和所接入的 通道号一致)
+	ST_byChanIndex   BYTE
+	ST_wSpeedLimit   WORD // 限速上限（超速时有效）
+	ST_byChanIndexEx BYTE // byChanIndexEx*256+byChanIndex表示真实通道号。
+	/*车辆方位布控标志,0~为普通车牌识别报警,
+	  1~为车辆位置布控触发报警(即通过PUT /ISAPI/Traffic/channels/<ID>/vehiclePositionControl?format=json触发)。
+	  2~为车辆智能布控触发报警(包含多预置点及GPS车辆布控)(即通过PUT /ISAPI/Traffic/channels/<ID>/vehicleMonitor/<taskID>/startTask触发,
+	  但在unarmedVehicleDetectionEnable（非目标车辆检测使能）为true时，只上报车辆检测报警，无车辆智能布控报警，因此该字段取值为0，而不是2)。
+	  3~为手动车辆布控触发报警(/ISAPI/Traffic/channels/<ID>/manualVehicleMonitor?format=json)
+	  4~为日常布控(复用车辆检测配置)可通过车辆检测能力中区分是否支持日常车辆布控,
+	      (即通过/ISAPI/Traffic/channels/<ID>/vehicleDetect/capabilities中isSupportDailyVehicleMonitor判断,日常车辆布控时,设备不仅会上报ANPR报警还会实时上报vehicleMonitor车辆布控报警)
+	      若不返回该字段则代表为普通车辆检测
+	*/
+	ST_byVehiclePositionControl BYTE
+	ST_struPlateInfo            NET_DVR_PLATE_INFO   // 车牌信息结构
+	ST_struVehicleInfo          NET_DVR_VEHICLE_INFO // 车辆信息
+	ST_byMonitoringSiteID       [48]BYTE             // 监测点编号
+	ST_byDeviceID               [48]BYTE             // 设备编号
+	ST_byDir                    BYTE                 // 监测方向，1-上行（反向），2-下行(正向)，3-双向，4-由东向西，5-由南向北,6-由西向东，7-由北向南，8-其它
+	ST_byDetectType             BYTE                 // 检测方式,1-地感触发，2-视频触发，3-多帧识别，4-雷达触发
+	//关联车道方向类型，参考ITC_RELA_LANE_DIRECTION_TYPE
+	//该参数为车道方向参数，与关联车道号对应，确保车道唯一性。
+	ST_byRelaLaneDirectionType BYTE
+	ST_byCarDirectionType      BYTE // 车辆具体行驶的方向，0表示从上往下，1表示从下往上（根据实际车辆的行驶方向来的区分）,2表示未知
+	//当wIllegalType参数为空时，使用该参数。若wIllegalType参数为有值时，以wIllegalType参数为准，该参数无效。
+	ST_dwCustomIllegalType DWORD // 违章类型定义(用户自定义)
+	/*为0~数字格式时，为老的违章类型，wIllegalType、dwCustomIllegalType参数生效，赋值国标违法代码。
+	  为1~字符格式时，pIllegalInfoBuf参数生效。老的违章类型，wIllegalType、dwCustomIllegalType参数依然赋值国标违法代码*/
+	ST_pIllegalInfoBuf     *BYTE //违法代码字符信息结构体指针；指向NET_ITS_ILLEGAL_INFO
+	ST_byIllegalFromatType BYTE  // 违章信息格式类型； 0~数字格式， 1~字符格式
+	ST_byPendant           BYTE  //  0-表示未知,1-车窗有悬挂物，2-车窗无悬挂物
+	ST_byDataAnalysis      BYTE  // 0-数据未分析, 1-数据已分析
+	ST_byYellowLabelCar    BYTE  // 0-表示未知, 1-非黄标车,2-黄标车
+	ST_byDangerousVehicles BYTE  // 0-表示未知, 1-非危险品车,2-危险品车
+	//以下字段包含Pilot字符均为主驾驶，含Copilot字符均为副驾驶
+	ST_byPilotSafebelt   BYTE // 0-表示未知,1-系安全带,2-不系安全带
+	ST_byCopilotSafebelt BYTE // 0-表示未知,1-系安全带,2-不系安全带
+	ST_byPilotSunVisor   BYTE // 0-表示未知,1-不打开遮阳板,2-打开遮阳板
+	ST_byCopilotSunVisor BYTE // 0-表示未知, 1-不打开遮阳板,2-打开遮阳板
+	ST_byPilotCall       BYTE //  0-表示未知, 1-不打电话,2-打电话
+	//0-开闸，1-未开闸 (专用于历史数据中相机根据黑白名单匹配后，是否开闸成功的标志)；当byAlarmDataType为0-实时数据时 0-未开闸 1-开闸
+	byBarrierGateCtrlType   BYTE
+	ST_byAlarmDataType      BYTE                    // 0-实时数据，1-历史数据
+	ST_struSnapFirstPicTime NET_DVR_TIME_V30        // 端点时间(ms)（抓拍第一张图片的时间）
+	ST_dwIllegalTime        DWORD                   // 违法持续时间（ms） = 抓拍最后一张图片的时间 - 抓拍第一张图片的时间
+	ST_dwPicNum             DWORD                   // 图片数量（与picGroupNum不同，代表本条信息附带的图片数量，图片信息由struVehicleInfoEx定义
+	ST_struPicInfo          [6]NET_ITS_PICTURE_INFO // 图片信息,单张回调，最多6张图，由序号区分
+}
+
+type NET_DVR_PLATE_RESULT struct {
+	ST_dwSize         DWORD    // 结构长度
+	ST_byResultType   BYTE     // 0-视频识别结果，1图像识别结果 2 大于10M时走下载路线
+	ST_byChanIndex    BYTE     // 通道号
+	ST_wAlarmRecordID WORD     // 报警录像ID(用于查询录像，仅当byResultType为2时有效)
+	ST_dwRelativeTime DWORD    // 相对时间点
+	ST_byAbsTime      [32]BYTE // 绝对时间点,yyyymmddhhmmssxxx,e.g.20090810235959999（毫秒）
+	ST_dwPicLen       DWORD    // 图片长度(近景图)
+	ST_dwPicPlateLen  DWORD    // 车牌小图片长度
+	ST_dwVideoLen     DWORD    // 录像内容长度
+	ST_byTrafficLight BYTE     // 0-非红绿灯抓拍，1-绿灯时抓拍；2-红灯时抓拍
+	ST_byPicNum       BYTE     // 连拍的图片序号
+	ST_byDriveChan    BYTE     // 触发车道号
+	ST_byVehicleType  BYTE     // 车辆类型，参考VTR_RESULT
+	ST_dwBinPicLen    DWORD    // 车牌二值图长度
+	ST_dwCarPicLen    DWORD    // 车辆原图长度
+	ST_dwFarCarPicLen DWORD    // 远景图长度
+	ST_pBuffer3       *BYTE    // 车牌二值图
+	ST_pBuffer4       *BYTE    // 车辆原图
+	ST_pBuffer5       *BYTE    // 远景图
+	//关联车道方向类型，参考ITC_RELA_LANE_DIRECTION_TYPE
+	//该参数为车道方向参数，与关联车道号对应，确保车道唯一性。
+	ST_byRelaLaneDirectionType BYTE
+	ST_byCarDirectionType      BYTE // 车辆具体行驶的方向，0表示从上往下，1表示从下往上（根据实际车辆的行驶方向来的区分）,2表示未知
+	ST_byRes3                  [6]BYTE
+	ST_struPlateInfo           NET_DVR_PLATE_INFO   // 车牌信息结构
+	ST_struVehicleInfo         NET_DVR_VEHICLE_INFO // 车辆信息
+	ST_pBuffer1                *BYTE                //  当上传的是图片(近景图)，指针指向图片信息，当上传的是视频，指针指向视频信息，如果不想获得图片或视频信息，传NULL(DVS车辆近景图)
+	ST_pBuffer2                *BYTE                //  当上传的是图片(车牌图)时，指向车牌图片的指针（DVS车牌彩图）
+}
+
+//后面紧跟图片数据和录像数据，只传一种，图片数据为场景图片+车牌小图片
+
+type NET_ITS_ILLEGAL_INFO struct {
+	ST_byIllegalInfo [MAX_ILLEGAL_LEN] /*64*/ BYTE // 违章类型信息（字符格式）
+	ST_byRes         [256]BYTE
+}
+
+type NET_DVR_ALARMINFO_FIXED_HEADER struct {
+	/*0-信号量报警,1-硬盘满,2-信号丢失，3－移动侦测，4－硬盘未格式化,5-写硬盘出错,6-遮挡报警，
+	  7-制式不匹配, 8-非法访问，9-视频信号异常，10-录像异常，11-智能场景变化，12-阵列异常，13-前端/录像分辨率不匹配,
+	  14-申请解码资源失败,15-智能侦测报警, 16-热备异常，17-录播主机报警，18-语音对讲请求报警,19-音频丢失，20-开启录像，
+	  21-关闭录像，22-车辆检测算法异常，23-脉冲报警,24-人脸库硬盘异常,25-人脸库变更,26-人脸库图片变更,27-POC异常,28-相机视角异常，
+	  30-缺少SD卡,32-云台堵转异常*/
+	ST_dwAlarmType      DWORD           //报警类型
+	ST_struAlarmTime    NET_DVR_TIME_EX //发生报警的时间
+	ST_byUnionLen       [116]BYTE       //分出去8个字节用于扩展时区
+	ST_pRes             *DWORD          //用于兼容64位下结构体字节不对齐问题
+	ST_byTimeDiffFlag   BYTE            /*时差字段是否有效  0-时差无效， 1-时差有效 */
+	ST_cTimeDifferenceH BYTE            /*与UTC的时差（小时），-12 ... +14， +表示东区,，byTimeDiffFlag为1时有效*/
+	ST_cTimeDifferenceM BYTE            /*与UTC的时差（分钟），-30, 30, 45， +表示东区，byTimeDiffFlag为1时有效*/
+	ST_byRes2           [5]BYTE         //保留
+}
+
+// type NET_DVR_ALARMINFO_V40 struct {
+// 	ST_struAlarmFixedHeader NET_DVR_ALRAM_FIXED_HEADER //报警固定部分
+// 	ST_pAlarmData           *DWORD                     //报警可变部分内容
+// }
+
+type NET_ITC_LANE_LOGIC_PARAM struct {
+	ST_byUseageType     BYTE     //车道用途类型，详见ITC_LANE_USEAGE_TYPE
+	ST_byDirectionType  BYTE     //车道方向类型，详见ITC_LANE_DIRECTION_TYPE
+	ST_byCarDriveDirect BYTE     //车辆行驶方向，详见ITC_LANE_CAR_DRIVE_DIRECT
+	ST_byRes            [33]BYTE //保留
+}
+
+type NET_ITC_POLYGON struct {
+	ST_dwPointNum DWORD                                    //有效点 大于等于3，若是3点在一条线上认为是无效区域，线交叉认为是无效区域
+	ST_struPos    [ITC_MAX_POLYGON_POINT_NUM]NET_VCA_POINT //多边形边界点,最多20个
+}
+
+type NET_VCA_LINE struct {
+	ST_struStart NET_VCA_POINT //起点
+	ST_struEnd   NET_VCA_POINT //终点
+}
+
+type NET_ITC_LINE struct {
+	ST_struLine   NET_VCA_LINE //线参数
+	ST_byLineType BYTE         //线类型，详见ITC_LINE_TYPE
+	ST_byRes      [7]BYTE
+}
+
+type NET_ITC_PLATE_RECOG_PARAM struct {
+	ST_byDefaultCHN [MAX_CHJC_NUM]BYTE /*设备运行省份的汉字简写*/
+	ST_byEnable     BYTE               //是否启用该区域牌识，0-否，1-是
+	ST_dwRecogMode  DWORD              /*识别的类型，
+	  bit0-背向识别：0-正向车牌识别，1-背向识别(尾牌识别) ；
+	  bit1-大车牌识别或小车牌识别：0-小车牌识别，1-大车牌识别 ；
+	  bit2-车身颜色识别：0-不采用车身颜色识别，在背向识别或小车牌识别时禁止启用，1-车身颜色识别；
+	  bit3-农用车识别：0-不采用农用车识别，1-农用车识别；
+	  bit4-模糊识别：0-不采用模糊识别，1-模糊识别；
+	  bit5-帧定位或场定位：0-帧定位，1-场定位；
+	  bit6-帧识别或场识别：0-帧识别，1-场识别；
+	  bit7-晚上或白天：0-白天，1-晚上
+	  bit8-摩托车识别：0-不采用摩托车识别，1-摩托车识别;
+	  bit9-场景模式：0-电警/多帧，1-卡口；
+	  bit10-微小车牌：0-不启用，1-启用微小车牌识别(像素60～80)
+	  bit11-安全带检测：0-不启用，1-启用安全带检测
+	  bit12-民航车牌识别: 0-不启用，1-开启民航车牌识别
+	  bit13-车牌过渡倾斜处理: 0-不启用，1-开启过渡倾斜处理（PRS）
+	  bit14-超大车牌识别: 0-不启用，1-开启超大车牌识别（PRS）
+	  bit15-遮阳板检测：0-不启用，1-启用遮阳板检测
+	  bit16-黄标车检测：0-不启用，1-启用黄标车检测
+	  bit17-危险品车辆检测：0-不启用，1-启用危险品车辆检测
+	  bit18-使馆车牌识别：0-不启用，1-启用使馆车牌识别
+	  bit19-车辆子品牌识别：0-不启用，1-启用车辆子品牌识别
+	  bit20-打电话识别：0-不启用，1-启用
+	  bit21-车窗悬挂物识别：0-不启用，1-启用
+	*/
+	ST_byVehicleLogoRecog BYTE //车标识别 0-不启用，1-启用
+	/*
+	   0-保留，1-澳，2-京，3-渝，4-闽，5-甘，6-粤，7-桂，8-贵，9-琼，10-冀，11-豫，
+	   12-黑，13-鄂，14-湘，15-吉，16-苏，17-赣，18-辽，19-蒙，20-宁，21-青，22-鲁，
+	   23-晋，24-陕，25-沪，26-川，27-台，28-津，29-藏，30-港，31-新，32-云，33-浙，
+	   34-皖，0xff-全部
+	*/
+	ST_byProvince          BYTE //省份索引值
+	ST_byRegion            BYTE // 区域索引值 0-保留，1-欧洲，2-俄语区域, 3-欧洲&俄罗斯(EU&CIS),4-中东(Middle East)
+	ST_byCountry           BYTE //国家索引，参照枚举COUNTRY_INDEX(不支持“COUNTRY_ALL = 0xff,//ALL 全部”)
+	ST_wPlatePixelWidthMin WORD //车牌像素识别宽度最小值（单位是像素）当前推荐范围[130,500]
+	ST_wPlatePixelWidthMax WORD //车牌像素识别宽度最大值（单位是像素）当前推荐范围[130,500]
+	ST_byRes               [24]BYTE
+}
+
+type NET_ITC_INTERVAL_PARAM struct {
+	ST_byIntervalType BYTE //间隔类型（默认按时间），0-时间起效,1-距离起效
+	ST_byRes1         [3]BYTE
+	ST_wInterval      [MAX_INTERVAL_NUM]WORD //连拍间隔时间（单位ms）或连拍间隔距离（单位分米），当byIntervalType为0时，表示间隔时间，当byIntervalType为1时，表示距离
+	ST_byRes          [8]BYTE
+}
+
+type NET_ITC_VIOLATION_DETECT_LINE struct {
+	struLaneLine     NET_ITC_LINE //车道线参数
+	struStopLine     NET_ITC_LINE //停止线参数
+	struRedLightLine NET_ITC_LINE //闯红灯触发线参数
+	struCancelLine   NET_ITC_LINE //直行触发位置取消线
+	struWaitLine     NET_ITC_LINE //待行区停止线参数
+	struRes          [8]NET_ITC_LINE
+}
+
+type NET_ITC_POST_MOBILE_PARAM struct {
+	ST_byEnable    BYTE
+	ST_bySceneMode BYTE //场景模式 0-高速公路 1-城市道路
+	/*抓拍类型
+	  bit0-卡口,bit1-大车占道,bit2-压硬路肩
+	*/
+	ST_wExpressWayCapType WORD //高速公路
+	/*抓拍类型
+	  bit0-卡口,bit1-机占非,bit2-占用专用车道
+	*/
+	ST_wUrbanRoadCapType    WORD                                                            //城市道路
+	ST_byCapNum             BYTE                                                            //抓拍张数 [2,3]
+	ST_byRecordEnable       BYTE                                                            //违章录像使能 0-关闭，1-开启
+	ST_dwPreRecordTime      DWORD                                                           //录像预录时间(s)
+	ST_dwOverRecordTime     DWORD                                                           //录像超时时间(s)
+	ST_struLane             NET_ITC_LANE_LOGIC_PARAM                                        //车道属性
+	ST_struPolygon          [MAX_MOBILE_POLYGON_NUM] /*3*/ NET_ITC_POLYGON                  //牌识区域参数
+	ST_struLine             [MAX_MOBILE_DETECTLINE_NUM] /*3*/ NET_ITC_VIOLATION_DETECT_LINE //违规检测线
+	ST_struLaneBoundaryLine NET_ITC_LINE                                                    //车道边界线（最右边车道的右车道线）
+	ST_struPlateRecog       NET_ITC_PLATE_RECOG_PARAM                                       //牌识参数
+	ST_struInterval         NET_ITC_INTERVAL_PARAM                                          //抓拍间隔参数（20byte）
+	ST_byRes                [256]BYTE
+}
+
+type NET_ITC_VIOLATION_DETECT_PARAM struct {
+	ST_dwVioDetectType       DWORD //违规检测类型, 按位表示, 详见ITC_VIOLATION_DETECT_TYPE ,0-不启用,1-启用
+	ST_byDriveLineSnapTimes  BYTE  //压车道线抓拍张数,2-3
+	ST_byReverseSnapTimes    BYTE  //逆行抓拍,2-3
+	ST_wStayTime             WORD  //机占非停留时间（该时间后抓拍），单位s
+	ST_byNonDriveSnapTimes   BYTE  //机占非抓拍张数2-3
+	ST_byChangeLaneTimes     BYTE  //违法变道抓拍张数 2-3
+	ST_bybanTimes            BYTE  //违法禁令抓拍张数2-3
+	ST_byDriveLineSnapSen    BYTE  // 压线灵敏度(0~100)(3.7Ver)
+	ST_wSnapPosFixPixel      WORD  //第2,3张抓拍位置最小偏移(违反信号灯时起效)（单位：像素） 命名需改进
+	ST_bySpeedTimes          BYTE  //违法超速抓拍张数2-3(3.8Ver)
+	ST_byTurnAroundEnable    BYTE  //违章掉头使能 0~关闭 1~开启
+	ST_byThirdPlateRecogTime BYTE  //第三张牌识时间 0~180s
+	ST_byPostSnapTimes       BYTE  //卡口抓拍张数,1-2张
+	ST_byRes1                [18]BYTE
+	ST_wStopLineDis          WORD //电警第2张违规图片与停止线的最短距离，[0,300]单位(像素)
+	ST_byRes                 [14]BYTE
+}
+
+type NET_IPC_LANE_HVT_PARAM struct {
+	ST_byLaneNO         BYTE
+	ST_byCarDriveDirect BYTE
+	//车辆行驶方向 ITC_LANE_CAR_DRIVE_DIRECT
+	ST_byRes        [62]BYTE
+	ST_struLaneLine NET_ITC_LINE
+	//车道线
+	ST_struPlateRecog NET_ITC_POLYGON
+	//牌识区域
+	ST_byRes1 [256]BYTE
+}
+
+type NET_ITC_PARKING_DETECTION struct {
+	ST_byEnable           BYTE     //是否启用，0-不启用，1-启用
+	ST_byRes              BYTE     //保留字节
+	ST_wDuration          WORD     //检测时间间隔，单位：s
+	ST_wAlarmIntervalTime WORD     //上传时间间隔，单位：s
+	ST_byRes1             [58]BYTE //保留字节
+}
+
+// NET_IPC_POST_HVT_PARAM 卡口混合模式
+type NET_IPC_POST_HVT_PARAM struct {
+	ST_byEnable             BYTE
+	ST_byLaneNum            BYTE
+	ST_byEnhancedMode       BYTE //增强模式，0-不启用，1-启用
+	ST_byPicRecognition     BYTE //车辆报警图片二次识别，0-不启用，1-启用
+	ST_byRes                [60]BYTE
+	ST_struLaneBoundaryLine NET_ITC_LINE              //车道边界线（最左边车道的左边界线）
+	ST_struPlateRecog       NET_ITC_PLATE_RECOG_PARAM //牌识参数  40
+	ST_struLaneParam        [MAX_ITC_LANE_NUM] /*6*/ NET_IPC_LANE_HVT_PARAM
+	ST_szSceneName          [NAME_LEN] /*32*/ BYTE    //场景名称
+	ST_struSnapLine         NET_VCA_LINE              //抓拍线，抓在相机的架设方式为侧装，配置这个参数生效（即4.5中NET_DVR_CAMERA_SETUPCFG结构体中byErectMethod字段为1时 ）
+	ST_struParkingDetection NET_ITC_PARKING_DETECTION //停车检测参数
+	ST_byRes1               [328]BYTE
+}
+
+type NET_DVR_GEOGLOCATION struct {
+	iRes   [2]int /*保留*/
+	dwCity DWORD  /*城市，详见PROVINCE_CITY_IDX */
+}
+
+//抓拍机4.0新增
+type NET_ITC_LANE_HVT_PARAM_V50 struct {
+	ST_byLaneNO              BYTE //关联的车道号1～255(用于叠加和上传)
+	ST_byFlashMode           BYTE //闪光灯闪烁模式，0-同时闪，1-轮流闪
+	ST_bySignSpeed           BYTE //小车标志限高速，单位km/h
+	ST_bySpeedLimit          BYTE //小车限高速值，单位km/h
+	ST_bySignLowSpeed        BYTE //小车标志限底速，单位km/h
+	ST_byLowSpeedLimit       BYTE //小车限底速值，单位km/h
+	ST_byBigCarSignSpeed     BYTE //大车标志限高速，单位km/h（新交规）
+	ST_byBigCarSpeedLimit    BYTE //大车限高速值，单位km/h（新交规）
+	ST_byBigCarSignLowSpeed  BYTE //大车标志限底速，单位km/h
+	ST_byBigCarLowSpeedLimit BYTE //大车限底速值，单位km/h
+	ST_bySnapTimes           BYTE //卡口抓拍张数，1~3
+	ST_byDriveLineSnapTime   BYTE // 压线抓拍张数 1~3
+	ST_byHighSpeedSnapTime   BYTE // 超高速抓拍张数1~3
+	ST_byLowSpeedSnapTime    BYTE // 超低速抓拍张数1~3
+	ST_byBanSnapTime         BYTE // 违反禁令抓拍张数  1~3
+	ST_byReverseSnapTime     BYTE //逆行抓拍张数  1~3
+	ST_byRelatedDriveWay     BYTE //关联车道号，用于匹配车检器
+	ST_byLaneType            BYTE //车道类型，0-未配置、1-高速公路、2-城市快速路、0xff-其他道路
+	//关联车道方向类型，参考ITC_RELA_LANE_DIRECTION_TYPE
+	//该参数为车道方向参数，与关联车道号byRelatedDriveWay对应，确保车道唯一性。
+	ST_byRelaLaneDirectionType BYTE
+	ST_byRes1                  [27]BYTE
+	ST_byChangeLaneEnable      BYTE //违章变道抓拍使能，0-关闭，1-开启
+	ST_byChangeLaneCapNo       BYTE //违章变道抓拍张数2-3
+	//目前仅使用第一个车道的，以后可能会扩展为多车道分别配置
+	//类型, 按位表示,0-不启用,1-启用参考 ITC_VIOLATION_DETECT_TYPE
+	ST_dwVioDetectType DWORD
+	ST_dwRelatedIOOut  DWORD                    //关联的IO输出口(可以同时关联多个)，按位表示IO输出口，第0位表示IO输出口1，以此类推，0-不关联，1-关联
+	ST_struTrigLine    NET_ITC_LINE             //触发线，目前仅使用第一个车道的，以后可能会扩展为多车道分别配置
+	ST_struLineLeft    NET_ITC_LINE             //左车道线
+	ST_struPlateRecog  NET_ITC_POLYGON          //牌识区域
+	ST_struLane        NET_ITC_LANE_LOGIC_PARAM //车道属性，用byUseageType和byCarDriveDirect
+	ST_struInterval    NET_ITC_INTERVAL_PARAM   //抓拍间隔参数（20byte）
+	ST_byRes2          [280]BYTE
+}
+
+// NET_ITC_POST_HVT_PARAM_V50 卡口混合模式V50
+type NET_ITC_POST_HVT_PARAM_V50 struct {
+	ST_byLaneNum            BYTE //识别的车道个数，1-6
+	ST_byCapType            BYTE //抓拍类型，0-机、非、人（默认），1-机动车
+	ST_byCapMode            BYTE //抓拍方式，0-视频抽帧，1-打断抓拍，2-混合模式，
+	ST_bySecneMode          BYTE //场景模式，0-城区道路（默认），1-小区出入口，2-高速公路
+	ST_bySpeedMode          BYTE //测速模式，0-无测速，1-雷达测速，2-视频测速
+	ST_byLineRuleEffect     BYTE //触发规则线有效性,每一位代表一条触发线,0-无效;1-有效。bit0-左触发线;bit1-右触发线;bit2-视频检测区域
+	ST_byRes1               [78]BYTE
+	ST_struLeftTrigLine     NET_ITC_LINE                                        //左触发线(一条垂直线)
+	ST_struRigtTrigLine     NET_ITC_LINE                                        //右触发线(一条垂直线)
+	ST_struLaneBoundaryLine NET_ITC_LINE                                        //车道边界线（最右边车道的右车道线）
+	ST_struDetectArea       NET_ITC_POLYGON                                     //视频检测区域
+	ST_struGeogLocation     NET_DVR_GEOGLOCATION                                //地理位置（默认浙江省）计算时区
+	ST_struLaneParam        [MAX_ITC_LANE_NUM] /*6*/ NET_ITC_LANE_HVT_PARAM_V50 //单车道属性
+	ST_struPlateRecog       NET_ITC_PLATE_RECOG_PARAM                           //牌识参数
+	ST_byRes2               [260]BYTE
+}
+
+type NET_ITC_TRIGGER_PARAM_UNION struct {
+	uLen [1070]DWORD
+	// NET_ITC_POST_IOSPEED_PARAM        struIOSpeed      //（卡口）IO测速参数
+	// NET_ITC_POST_SINGLEIO_PARAM       struSingleIO     //（卡口）单IO参数
+	// NET_ITC_POST_RS485_PARAM          struPostRs485    //（卡口）RS485车检器参数
+	// NET_ITC_POST_RS485_RADAR_PARAM    struPostRadar    //（卡口）RS485雷达参数
+	// NET_ITC_POST_VTCOIL_PARAM         struVtCoil       //（卡口）虚拟线圈参数
+	// NET_ITC_POST_HVT_PARAM            struHvt          //（卡口）混行卡口参数
+	// NET_ITC_EPOLICE_IOTL_PARAM        struIOTL         //（电警）IO红绿灯参数
+	// NET_ITC_EPOLICE_RS485_PARAM       struEpoliceRs485 //（电警）RS485车检器触发参数
+	// NET_ITC_EPOLICE_RS485_PARAM       struPERs485      //（卡式电警）RS485车检器触发参数
+	// NET_ITC_POST_MPR_PARAM            struPostMpr      //多帧检测触发（MPR）
+	// NET_DVR_VIA_VTCOIL_PARAM          struViaVtCoil    //(VIA)视频检测参数
+	// NET_ITC_POST_IMT_PARAM            struPostImt      //智慧监控触发
+	// NET_ITC_POST_PRS_PARAM            struPostPrs      //视频检测触发
+	// NET_IPC_POST_HVT_PARAM            struIpcHvt       //(IPC) 混行卡口参数
+	// NET_ITC_POST_HVT_PARAM_V50        struHvtV50       /*（卡口）混行卡口参数V50*/
+	// NET_ITC_POST_MOBILE_PARAM         struPostMobile   // 移动交通触发模式
+	// NET_ITC_NOCOMITY_PEDESTRIAN_PARAM struNoComityPed  //不礼让行人参数
+	// NET_ITC_REDLIGHT_PEDESTRIAN_PARAM struRedLightPed  //行人闯红灯参数
+}
+
+type NET_ITC_SINGLE_TRIGGERCFG struct {
+	ST_byEnable      BYTE //是否启用该触发模式，0-否，1-是
+	ST_byRes1        [3]BYTE
+	ST_dwTriggerType DWORD                       //触发类型，详见ITC_TRIGGERMODE_TYPE
+	ST_uTriggerParam NET_ITC_TRIGGER_PARAM_UNION //触发参数
+	ST_byRes         [64]BYTE
+}
+
+type NET_ITC_TRIGGERCFG struct {
+	ST_dwSize           DWORD                     //结构长度
+	ST_struTriggerParam NET_ITC_SINGLE_TRIGGERCFG //单个触发参数
+	ST_byRes            [32]BYTE
+}
+
+func (cfg *NET_ITC_SINGLE_TRIGGERCFG) NET_ITC_POST_MOBILE_PARAM() *NET_ITC_POST_MOBILE_PARAM {
+	ptr := unsafe.Pointer(&cfg.ST_uTriggerParam.uLen[0])
+
+	var ncfg NET_ITC_POST_MOBILE_PARAM = *(*NET_ITC_POST_MOBILE_PARAM)(ptr)
+	return &ncfg
+}
+
+func (cfg *NET_ITC_SINGLE_TRIGGERCFG) NET_ITC_VIOLATION_DETECT_PARAM() *NET_ITC_VIOLATION_DETECT_PARAM {
+	ptr := unsafe.Pointer(&cfg.ST_uTriggerParam.uLen[0])
+
+	var ncfg NET_ITC_VIOLATION_DETECT_PARAM = *(*NET_ITC_VIOLATION_DETECT_PARAM)(ptr)
+	return &ncfg
+}
+
+func (cfg *NET_ITC_SINGLE_TRIGGERCFG) NET_ITC_POST_HVT_PARAM_V50() *NET_ITC_POST_HVT_PARAM_V50 {
+	ptr := unsafe.Pointer(&cfg.ST_uTriggerParam.uLen[0])
+
+	var ncfg NET_ITC_POST_HVT_PARAM_V50 = *(*NET_ITC_POST_HVT_PARAM_V50)(ptr)
+	return &ncfg
 }
