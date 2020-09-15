@@ -105,14 +105,14 @@ func main() {
 		log.Fatalf("set mesasge callback error %s", err)
 	}
 
-	ret, err := client.GetDVRConfig(netsdk.NetItcGetTriggercfg, 0)
-	if err != nil {
-		log.Fatalf("get dvr config %s", err)
-	}
+	// ret, err := client.GetDVRConfig(netsdk.NetItcGetTriggercfg, 0)
+	// if err != nil {
+	// 	log.Fatalf("get dvr config %s", err)
+	// }
 
-	cfg := ret.(*netsdk.NET_ITC_TRIGGERCFG)
+	// cfg := ret.(*netsdk.NET_ITC_TRIGGERCFG)
 
-	log.Printf("ITC_POST_HVT_PARAM_V50 % #v", pretty.Formatter(cfg.ST_struTriggerParam.NET_ITC_POST_HVT_PARAM_V50()))
+	// log.Printf("ITC_POST_HVT_PARAM_V50 % #v", pretty.Formatter(cfg.ST_struTriggerParam.NET_ITC_POST_HVT_PARAM_V50()))
 
 	if err := client.Subscribe(0, func(cmd netsdk.CommAlarm, cli *netsdk.Client, alarm *netsdk.NET_DVR_ALARMER, info interface{}) {
 		log.Printf("cmd 0x%0x", cmd)
@@ -243,6 +243,17 @@ func main() {
 					// return
 				}
 			}
+		case netsdk.CommGisinfoUpload:
+			log.Printf("镜头变化")
+			ainfo, ok := info.(*netsdk.NET_DVR_GIS_UPLOADINFO)
+			if !ok {
+				log.Printf("invalid type ")
+				return
+			}
+
+			log.Printf("PTS pos %f", ainfo.ST_struPtzPos.ST_fPanPos)
+			log.Printf("Tilt Pos %f", ainfo.ST_struPtzPos.ST_fTiltPos)
+			log.Printf("Zoom pos %f", ainfo.ST_struPtzPos.ST_fZoomPos)
 		default:
 			log.Printf("info % #v", pretty.Formatter(info))
 		}
