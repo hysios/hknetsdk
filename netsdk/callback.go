@@ -136,3 +136,17 @@ func export_ExceptionCallBack(dwType C.DWORD, lUserID C.LONG, lHandle C.LONG, pU
 		return 0
 	}
 }
+
+//export export_RealDataCallback
+func export_RealDataCallback(lPlayHandle C.LONG, dwDataType C.DWORD, pBuffer *C.BYTE, dwBufSize C.DWORD, pUser unsafe.Pointer) {
+	v := pointer.Restore(pUser)
+	visitor, ok := v.(RealDataVisitor)
+	if !ok {
+		return
+	}
+
+	if visitor.Callback != nil {
+		b := C.GoBytes(unsafe.Pointer(pBuffer), C.int(dwBufSize))
+		visitor.Callback(uint32(dwDataType), b)
+	}
+}

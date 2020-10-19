@@ -17,6 +17,7 @@ type (
 	WORD  = uint16
 	BYTE  = byte
 	BOOL  = int32
+	HWND  = uint32
 )
 
 type DeviceAbilityKind int
@@ -896,4 +897,220 @@ func (cfg *NET_ITC_SINGLE_TRIGGERCFG) NET_ITC_POST_HVT_PARAM_V50() *NET_ITC_POST
 
 	var ncfg NET_ITC_POST_HVT_PARAM_V50 = *(*NET_ITC_POST_HVT_PARAM_V50)(ptr)
 	return &ncfg
+}
+
+//获取巡航路径的数目
+type NET_DVR_PTZCRUISE_INFO struct {
+	ST_dwSize         DWORD
+	ST_dwPtzCruiseNum DWORD //路径个数
+	ST_dwGroupNum     DWORD //组数
+	ST_byRes          [8]BYTE
+}
+
+//预览V40接口
+type NET_DVR_PREVIEWINFO struct {
+	ST_lChannel          LONG                        //通道号
+	ST_dwStreamType      DWORD                       // 码流类型，0-主码流，1-子码流，2-码流3，3-码流4, 4-码流5,5-码流6,7-码流7,8-码流8,9-码流9,10-码流10
+	ST_dwLinkMode        DWORD                       // 0：TCP方式,1：UDP方式,2：多播方式,3 - RTP方式，4-RTP/RTSP,5-RSTP/HTTP ,6- HRUDP（可靠传输） ,7-RTSP/HTTPS
+	ST_hPlayWnd          HWND                        //播放窗口的句柄,为NULL表示不播放图象
+	ST_bBlocked          DWORD                       //0-非阻塞取流, 1-阻塞取流, 如果阻塞SDK内部connect失败将会有5s的超时才能够返回,不适合于轮询取流操作.
+	ST_bPassbackRecord   DWORD                       //0-不启用录像回传,1启用录像回传
+	ST_byPreviewMode     BYTE                        //预览模式，0-正常预览，1-延迟预览
+	ST_byStreamID        [STREAM_ID_LEN] /*32*/ BYTE //流ID，lChannel为0xffffffff时启用此参数
+	ST_byProtoType       BYTE                        //应用层取流协议，0-私有协议，1-RTSP协议,2-SRTP码流加密（对应此结构体中dwLinkMode 字段，支持如下方式, 为1，表示udp传输方式，信令走TLS加密，码流走SRTP加密，为2，表示多播传输方式，信令走TLS加密，码流走SRTP加密）
+	ST_byRes1            BYTE
+	ST_byVideoCodingType BYTE  //码流数据编解码类型 0-通用编码数据 1-热成像探测器产生的原始数据（温度数据的加密信息，通过去加密运算，将原始数据算出真实的温度值）
+	ST_dwDisplayBufNum   DWORD //播放库播放缓冲区最大缓冲帧数，范围1-50，置0时默认为1
+	ST_byNPQMode         BYTE  //NPQ是直连模式，还是过流媒体 0-直连 1-过流媒体
+	ST_byRecvMetaData    BYTE  //是否接收metadata数据，设备是否支持该功能通过GET /ISAPI/System/capabilities 中DeviceCap.SysCap.isSupportMetadata是否存在且为true
+	ST_byRes             [214]BYTE
+}
+
+//巡航点配置(私有IP快球专用)
+type NET_DVR_CRUISE_POINT struct {
+	ST_PresetNum BYTE //预置点
+	ST_Dwell     BYTE //停留时间
+	ST_Speed     BYTE //速度
+	ST_Reserve   BYTE //保留
+}
+
+type NET_DVR_CRUISE_RET struct {
+	ST_struCruisePoint [32]NET_DVR_CRUISE_POINT //最大支持32个巡航点
+}
+
+type NET_DVR_DEVICECFG_V40 struct {
+	ST_dwSize          DWORD
+	ST_sDVRName        [NAME_LEN]BYTE //DVR名称
+	ST_dwDVRID         DWORD          //DVR ID,用于遥控器 //V1.4(0-99), V1.5(0-255)
+	ST_dwRecycleRecord DWORD          //是否循环录像,0:不是; 1:是
+	//以下不可更改
+	ST_sSerialNumber          [SERIALNO_LEN]BYTE //序列号
+	ST_dwSoftwareVersion      DWORD              //软件版本号,高16位是主版本,低16位是次版本
+	ST_dwSoftwareBuildDate    DWORD              //软件生成日期,0xYYYYMMDD
+	ST_dwDSPSoftwareVersion   DWORD              //DSP软件版本,高16位是主版本,低16位是次版本
+	ST_dwDSPSoftwareBuildDate DWORD              // DSP软件生成日期,0xYYYYMMDD
+	ST_dwPanelVersion         DWORD              // 前面板版本,高16位是主版本,低16位是次版本
+	ST_dwHardwareVersion      DWORD              // 硬件版本,高16位是主版本,低16位是次版本
+	ST_byAlarmInPortNum       BYTE               //DVR报警输入个数
+	ST_byAlarmOutPortNum      BYTE               //DVR报警输出个数
+	ST_byRS232Num             BYTE               //DVR 232串口个数
+	ST_byRS485Num             BYTE               //DVR 485串口个数
+	ST_byNetworkPortNum       BYTE               //网络口个数
+	ST_byDiskCtrlNum          BYTE               //DVR 硬盘控制器个数
+	ST_byDiskNum              BYTE               //DVR 硬盘个数
+	ST_byDVRType              BYTE               //DVR类型, 1:DVR 2:ATM DVR 3:DVS ......
+	ST_byChanNum              BYTE               //DVR 通道个数
+	ST_byStartChan            BYTE               //起始通道号,例如DVS-1,DVR - 1
+	ST_byDecordChans          BYTE               //DVR 解码路数
+	ST_byVGANum               BYTE               //VGA口的个数
+	ST_byUSBNum               BYTE               //USB口的个数
+	ST_byAuxoutNum            BYTE               //辅口的个数
+	ST_byAudioNum             BYTE               //语音口的个数
+	ST_byIPChanNum            BYTE               //最大数字通道数 低8位，高8位见byHighIPChanNum
+	ST_byZeroChanNum          BYTE               //零通道编码个数
+	ST_bySupport              BYTE               //能力，位与结果为0表示不支持，1表示支持，
+	//bySupport & 0x1, 表示是否支持智能搜索
+	//bySupport & 0x2, 表示是否支持备份
+	//bySupport & 0x4, 表示是否支持压缩参数能力获取
+	//bySupport & 0x8, 表示是否支持多网卡
+	//bySupport & 0x10, 表示支持远程SADP
+	//bySupport & 0x20, 表示支持Raid卡功能
+	//bySupport & 0x40, 表示支持IPSAN搜索
+	//bySupport & 0x80, 表示支持rtp over rtsp
+	ST_byEsataUseage BYTE //Esata的默认用途，0-默认备份，1-默认录像
+	ST_byIPCPlug     BYTE //0-关闭即插即用，1-打开即插即用
+	ST_byStorageMode BYTE //0-盘组模式,1-磁盘配额, 2抽帧模式, 3-自动
+	ST_bySupport1    BYTE //能力，位与结果为0表示不支持，1表示支持
+	//bySupport1 & 0x1, 表示是否支持snmp v30
+	//bySupport1 & 0x2, 支持区分回放和下载
+	//bySupport1 & 0x4, 是否支持布防优先级
+	//bySupport1 & 0x8, 智能设备是否支持布防时间段扩展
+	//bySupport1 & 0x10, 表示是否支持多磁盘数（超过33个）
+	//bySupport1 & 0x20, 表示是否支持rtsp over http
+	ST_wDevType      WORD                    //设备型号
+	ST_byDevTypeName [DEV_TYPE_NAME_LEN]BYTE //设备型号名称
+	ST_bySupport2    BYTE                    //能力集扩展，位与结果为0表示不支持，1表示支持
+	//bySupport2 & 0x1, 表示是否支持扩展的OSD字符叠加(终端和抓拍机扩展区分)
+	ST_byAnalogAlarmInPortNum BYTE    //模拟报警输入个数
+	ST_byStartAlarmInNo       BYTE    //模拟报警输入起始号
+	ST_byStartAlarmOutNo      BYTE    //模拟报警输出起始号
+	ST_byStartIPAlarmInNo     BYTE    //IP报警输入起始号
+	ST_byStartIPAlarmOutNo    BYTE    //IP报警输出起始号
+	ST_byHighIPChanNum        BYTE    //数字通道个数，高8位
+	ST_byEnableRemotePowerOn  BYTE    //是否启用在设备休眠的状态下远程开机功能，0-不启用，1-启用
+	ST_wDevClass              WORD    //设备大类备是属于哪个产品线，0 保留，1-50 DVR，51-100 DVS，101-150 NVR，151-200 IPC，65534 其他，具体分类方法见《设备类型对应序列号和类型值.docx》
+	ST_byRes2                 [6]BYTE //保留
+}
+
+//标定点子结构
+type NET_DVR_CB_POINT struct {
+	ST_struPoint  NET_VCA_POINT  //标定点，主摄像机（枪机）
+	ST_struPtzPos NET_DVR_PTZPOS //球机输入的PTZ坐标
+	ST_byRes      [8]BYTE
+}
+
+type NET_DVR_TRACK_CALIBRATION_PARAM struct {
+	ST_byPointNum  BYTE //有效标定点个数
+	ST_byRes       [3]BYTE
+	ST_struCBPoint [MAX_CALIB_PT]NET_DVR_CB_POINT //标定点组
+}
+
+type NET_DVR_TRACK_CALIBRATION_PARAM_V41 struct {
+	ST_byPointNum        BYTE                           //有效标定点个数
+	ST_byRes             [3]BYTE                        //保留
+	ST_struCBPoint       [MAX_CALIB_PT]NET_DVR_CB_POINT //标定点组
+	ST_struHorizonPtzPos NET_DVR_PTZPOS                 //球机水平线PTZ坐标
+	ST_byRes2            [256]BYTE                      //保留
+}
+
+type NET_DVR_TRACK_CFG struct {
+	ST_dwSize          DWORD                           //结构长度
+	ST_byEnable        BYTE                            //标定使能
+	ST_byFollowChan    BYTE                            //被控制的从通道
+	ST_byDomeCalibrate BYTE                            //设置智能跟踪球机标定，1设置 0不设置
+	ST_byRes           BYTE                            //保留字节
+	ST_struCalParam    NET_DVR_TRACK_CALIBRATION_PARAM //标定点组
+}
+
+//球机本地规则菜单配置结构体
+type NET_DVR_TRACK_PARAMCFG struct {
+	ST_dwSize                  DWORD   // 结构大小
+	ST_wAlarmDelayTime         WORD    // 报警延时时间，目前球机只支持全局入侵 范围1-120秒
+	ST_wTrackHoldTime          WORD    // 报警跟踪持续时间  范围0-300秒
+	ST_byTrackMode             BYTE    //  参照 IPDOME_TRACK_MODE
+	ST_byPreDirection          BYTE    // 跟踪方向预判 0-不启用 1-启用
+	ST_byTrackSmooth           BYTE    // 跟踪连续  0-不启用 1-启用
+	ST_byZoomAdjust            BYTE    // 倍率系数调整 参见下表
+	ST_byMaxTrackZoom          BYTE    //最大跟踪倍率系数,0-表示默认倍率系数,等级6-标定值*1.0(默认),1-5为缩小标定值，值越小，缩小的比例越大,7-15为放大，值越大，放大的比例越大
+	ST_byStopTrackWhenFindFace BYTE    //人脸检测到后是否停止跟踪 0-否 1-是
+	ST_byStopTrackThreshold    BYTE    //跟踪终止评分阈值
+	ST_byRes                   [9]BYTE //  保留字节
+}
+
+//抓拍触发请求结构(保留)
+type NET_DVR_MANUALSNAP struct {
+	ST_byOSDEnable BYTE     //0-不关闭(默认)，1-关闭
+	ST_byLaneNo    BYTE     //车道号, 范围为1-6，默认为1(抓拍机内部测试使用)
+	ST_byChannel   BYTE     //通道号
+	ST_byRes       [21]BYTE //保留
+}
+
+//图片质量
+type NET_DVR_JPEGPARA struct {
+	/*注意：当图像压缩分辨率为VGA时，支持0=CIF, 1=QCIF, 2=D1抓图，
+	  当分辨率为3=UXGA(1600x1200), 4=SVGA(800x600), 5=HD720p(1280x720),6=VGA,7=XVGA, 8=HD900p
+	      仅支持当前分辨率的抓图*/
+
+	/* 可以通过能力集获取
+	   0-CIF，           1-QCIF，           2-D1，         3-UXGA(1600x1200), 4-SVGA(800x600),5-HD720p(1280x720)，
+	   6-VGA，           7-XVGA，           8-HD900p，     9-HD1080，     10-2560*1920，
+	   11-1600*304，     12-2048*1536，     13-2448*2048,  14-2448*1200， 15-2448*800，
+	   16-XGA(1024*768), 17-SXGA(1280*1024),18-WD1(960*576/960*480),      19-1080i,      20-576*576，
+	   21-1536*1536,     22-1920*1920,      23-320*240,    24-720*720,    25-1024*768,
+	   26-1280*1280,     27-1600*600,       28-2048*768,   29-160*120,    55-3072*2048,
+	   64-3840*2160,     70-2560*1440,      75-336*256,
+	   78-384*256,         79-384*216,        80-320*256,    82-320*192,    83-512*384,
+	   127-480*272,      128-512*272,       161-288*320,   162-144*176,   163-480*640,
+	   164-240*320,      165-120*160,       166-576*720,   167-720*1280,  168-576*960,
+	   180-180*240,      181-360*480,       182-540*720,    183-720*960,  184-960*1280,
+	   185-1080*1440,      215-1080*720(占位，未测试),  216-360x640(占位，未测试),245-576*704(占位，未测试)
+	   500-384*288,
+	   0xff-Auto(使用当前码流分辨率)
+	*/
+	ST_wPicSize    WORD
+	ST_wPicQuality WORD /* 图片质量系数 0-最好 1-较好 2-一般 */
+}
+
+//单IO触发抓拍功能配置
+type NET_DVR_SNAPCFG struct {
+	ST_dwSize            DWORD
+	ST_byRelatedDriveWay BYTE                   //触发IO关联的车道号
+	ST_bySnapTimes       BYTE                   //线圈抓拍次数，0-不抓拍，非0-连拍次数，目前最大5次
+	ST_wSnapWaitTime     WORD                   //抓拍等待时间，单位ms，取值范围[0,60000]
+	ST_wIntervalTime     [MAX_INTERVAL_NUM]WORD //连拍间隔时间，ms
+	ST_dwSnapVehicleNum  DWORD                  //抓拍车辆序号。
+	ST_struJpegPara      NET_DVR_JPEGPARA       //抓拍图片参数
+	ST_byRes2            [16]BYTE               //保留字节
+}
+
+type NET_DVR_AID_ALARM_V41 struct {
+	ST_dwSize                 DWORD                            //结构长度
+	ST_dwRelativeTime         DWORD                            //相对时标
+	ST_dwAbsTime              DWORD                            //绝对时标
+	ST_struDevInfo            NET_VCA_DEV_INFO                 //前端设备信息
+	ST_struAIDInfo            NET_DVR_AID_INFO                 //交通事件信息
+	ST_struSceneInfo          NET_DVR_SCENE_INFO               //场景信息
+	ST_dwPicDataLen           DWORD                            //图片长度
+	ST_pImage                 *BYTE                            //指向图片的指针
+	ST_byDataType             BYTE                             // 0-数据直接上传; 1-云存储服务器URL(3.7Ver)原先的图片数据变成URL数据，图片长度变成URL长度
+	ST_byLaneNo               BYTE                             //关联车道号
+	ST_wMilliSecond           WORD                             //时标毫秒
+	ST_byMonitoringSiteID     [MONITORSITE_ID_LEN] /*48*/ BYTE //监测点编号（路口编号、内部编号）
+	ST_byDeviceID             [DEVICE_ID_LEN] /*48*/ BYTE      //设备编号
+	ST_dwXmlLen               DWORD                            //XML报警信息长度
+	ST_pXmlBuf                *BYTE                            // XML报警信息指针,其XML对应到EventNotificationAlert XML Block
+	ST_byTargetType           BYTE                             // 检测的目标类型，0~未知，1~行人、2~二轮车、3~三轮车(行人检测中返回)
+	ST_byRes                  [7]BYTE                          // 保留字节
+	ST_dwPlateSmallPicDataLen DWORD                            //车牌小图图片长度
+	ST_pPlateSmallImage       *BYTE                            // //指向车牌小图的指针
 }

@@ -28,6 +28,9 @@ var (
 	addr     = flag.String("addr", "", "connect address")
 	user     = flag.String("user", "", "login username")
 	password = flag.String("pass", "", "login password")
+	channel  = flag.Int("channel", 1, "channel")
+	route    = flag.Int("route", 1, "route")
+
 	// deviceFile = flag.String("input", "", "devices file")
 )
 
@@ -35,7 +38,6 @@ func init() {
 	flag.Set("addr", "192.168.1.64:8000")
 	flag.Set("pass", "adm89679005")
 	flag.Set("user", "admin")
-
 }
 
 var safeStateMap = map[netsdk.BYTE]string{
@@ -91,20 +93,95 @@ func main() {
 	defer netsdk.Cleanup()
 
 	netsdk.SetExceptionCallback(func(typ int, userData interface{}) bool {
+		log.Printf("exception %d %s %v", typ, netsdk.ExceptionString(typ), userData)
+		log.Printf("Last Error %s", netsdk.Err(netsdk.GetLastErrorN()))
+
 		return true
 	}, nil)
 	netsdk.SetReconnect(30*time.Second, true)
+	netsdk.SetRecvTimeOut(15 * time.Second)
 
 	client, err = netsdk.Login(*addr, *user, *password)
 	log.Printf("%v %s", client, err)
 	log.Printf("serial: %s\n", client.DeviceInfo.ST_sSerialNumber[:])
 	pp.Printf("deviceinfo %v", client.DeviceInfo)
 	var ch = make(chan bool)
+	cruise, err := client.GetPTZCruise(*channel, *route)
+	if err != nil {
+		log.Printf("get ptz cruise error %s", err)
+	} else {
+		pp.Printf("cruse settings %v", cruise)
+	}
+
+	cfg, err := client.DVRConfig(netsdk.NetDvrGetDevicecfgV40, 0)
+	if err != nil {
+		log.Printf("get dvr config error %s", err)
+	} else {
+		if devicecfg, ok := cfg.(*netsdk.NET_DVR_DEVICECFG_V40); ok {
+			pp.Printf("Dvr Config %s", devicecfg)
+			log.Printf("DVRName %s\n", netsdk.Str(devicecfg.ST_sDVRName[:]))
+			log.Printf("SerialNumber %s\n", netsdk.Str(devicecfg.ST_sSerialNumber[:]))
+			log.Printf("DevTypeName %s\n", netsdk.Str(devicecfg.ST_byDevTypeName[:]))
+		}
+	}
+
+	cfg, err = client.DVRConfig(netsdk.NetDvrGetTrackParamcfg, 1)
+	if err != nil {
+		log.Printf("get dvr TrackParamcfg error %s", err)
+	} else {
+		if devicecfg, ok := cfg.(*netsdk.NET_DVR_TRACK_PARAMCFG); ok {
+			pp.Printf("Dvr TrackParamcfg %s", devicecfg)
+			devicecfg.ST_wTrackHoldTime = 60
+			devicecfg.ST_byTrackMode = 2
+			log.Println(client.SetDVRConfig(netsdk.NetDvrSetTrackParamcfg, 1, devicecfg))
+		}
+
+	}
+
+	go func() {
+		time.Sleep(3 * time.Second)
+		plateResult, err := client.Capture(&netsdk.NET_DVR_MANUALSNAP{
+			ST_byLaneNo:  0,
+			ST_byChannel: 0,
+		})
+
+		if err != nil {
+			log.Printf("dvr Capture error %s", err)
+		} else {
+			pp.Printf("plateResult %s", plateResult)
+		}
+
+		var snapcfg = netsdk.NET_DVR_SNAPCFG{
+			ST_dwSize:        uint32(unsafe.Sizeof(netsdk.NET_DVR_SNAPCFG{})),
+			ST_bySnapTimes:   1,
+			ST_wSnapWaitTime: 1000,
+			ST_wIntervalTime: [4]uint16{100, 0, 0, 0},
+		}
+		err = client.ContinuousShoot(&snapcfg)
+		if err != nil {
+			log.Printf("ContinuousShoot error %s", err)
+		} else {
+			pp.Printf("plateResult %s", plateResult)
+		}
+	}()
+
+	// out, err := client.DeviceAbility(netsdk.DADeviceSofthardware, "")
+	// if err != nil {
+	// 	log.Printf("DeviceAbility: DeviceSofthardware error %s", err)
+	// } else {
+	// 	log.Printf("DeviceAbility: %s\n", string(out))
+	// }
+	// config, err := client.ConfigFile()
+	// if err != nil {
+	// 	log.Fatalf("get config error %s", err)
+	// }
+	// log.Printf("%s\n", string(config))
 
 	if err := netsdk.SetMessageCallback(nil); err != nil {
 		log.Fatalf("set mesasge callback error %s", err)
 	}
 
+	var prefix = "unknown"
 	// ret, err := client.GetDVRConfig(netsdk.NetItcGetTriggercfg, 0)
 	// if err != nil {
 	// 	log.Fatalf("get dvr config %s", err)
@@ -130,6 +207,7 @@ func main() {
 				log.Printf("invalid type ")
 				return
 			}
+			prefix = "TFS"
 			log.Printf("DeviceID %s\n", string(ainfo.ST_byDeviceID[:]))
 			log.Printf("DevInfo IP %s\n", string(ainfo.ST_struDevInfo.ST_struDevIP.ST_sIpV4[:]))
 			b := netsdk.Bytes(ainfo.ST_struPlateInfo.ST_sLicense[:])
@@ -143,15 +221,25 @@ func main() {
 					continue
 				}
 				t := time.Now()
+				n := strings.Replace(t.Format("20060102150405.999999"), ".", "", 1)
 				b := C.GoBytes(unsafe.Pointer(pic.ST_pBuffer), C.int(pic.ST_dwDataLen))
-				log.Printf("image date %d", len(b))
-				imgfile := path.Join(dir, fmt.Sprintf("images/%s-%d.jpg", netsdk.Str(ainfo.ST_byDeviceID[:]), t.UnixNano()))
+				log.Printf("image type %d image data len %d", pic.ST_byType, len(b))
+				imgfile := path.Join(dir, fmt.Sprintf("images/%s-%s.jpg", netsdk.Str(ainfo.ST_byDeviceID[:]), n))
 				err := ioutil.WriteFile(imgfile, b, 0644)
 				if err != nil {
 					log.Printf("write file error %s", err)
 					// return
 				}
 			}
+		case netsdk.CommAlarmAidV41:
+			log.Println("交通事件信息")
+			ainfo, ok := info.(*netsdk.NET_DVR_AID_INFO)
+			if !ok {
+				log.Printf("invalid type ")
+				return
+			}
+			prefix = "AID"
+			log.Printf("ainfo %#v", ainfo)
 		case netsdk.CommUploadPlateResult:
 			log.Println("卡口车辆上报")
 			t := time.Now()
@@ -160,6 +248,7 @@ func main() {
 				log.Printf("invalid type ")
 				return
 			}
+			prefix = "UploadPlate"
 			log.Printf("info % #v", info)
 			b := netsdk.Bytes(ainfo.ST_struPlateInfo.ST_sLicense[:])
 			b, _ = netsdk.GbkToUtf8(b)
@@ -194,7 +283,7 @@ func main() {
 				log.Printf("invalid type ")
 				return
 			}
-
+			prefix = "ITS"
 			log.Printf("info % #v", info)
 			b := netsdk.Bytes(ainfo.ST_struPlateInfo.ST_sLicense[:])
 			b, _ = netsdk.GbkToUtf8(b)
@@ -234,9 +323,11 @@ func main() {
 					continue
 				}
 				t := time.Now()
+				n := strings.Replace(t.Format("20060102150405.999999"), ".", "", 1)
+
 				b := C.GoBytes(unsafe.Pointer(pic.ST_pBuffer), C.int(pic.ST_dwDataLen))
-				log.Printf("image date %d", len(b))
-				imgfile := path.Join(dir, fmt.Sprintf("images/%s-%d.jpg", netsdk.Str(ainfo.ST_byDeviceID[:]), t.UnixNano()))
+				log.Printf("image type %d image data len %d", pic.ST_byType, len(b))
+				imgfile := path.Join(dir, fmt.Sprintf("images/%s-%s.jpg", netsdk.Str(ainfo.ST_byDeviceID[:]), n))
 				err := ioutil.WriteFile(imgfile, b, 0644)
 				if err != nil {
 					log.Printf("write file error %s", err)
@@ -250,7 +341,7 @@ func main() {
 				log.Printf("invalid type ")
 				return
 			}
-
+			prefix = "GIS"
 			log.Printf("PTS pos %f", ainfo.ST_struPtzPos.ST_fPanPos)
 			log.Printf("Tilt Pos %f", ainfo.ST_struPtzPos.ST_fTiltPos)
 			log.Printf("Zoom pos %f", ainfo.ST_struPtzPos.ST_fZoomPos)
@@ -259,7 +350,8 @@ func main() {
 		}
 
 		t := time.Now()
-		jsonfile := path.Join(dir, fmt.Sprintf("images/%d.json", t.UnixNano()))
+		n := strings.Replace(t.Format("20060102150405.999999"), ".", "", 1)
+		jsonfile := path.Join(dir, fmt.Sprintf("images/%s-%s.json", prefix, n))
 		f, err := os.Create(jsonfile)
 		if err != nil {
 			log.Printf("write jsonfile error %s", err)

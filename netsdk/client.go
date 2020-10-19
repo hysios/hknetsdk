@@ -33,13 +33,6 @@ func (cli *Client) StopListen() error {
 	panic("nonimplement")
 }
 
-type DeviceAbility int
-
-func (cli *Client) DeviceAbility() ([]DeviceAbility, error) {
-	// C.NET_DVR_GetDeviceAbility(LONG lUserID, DWORD dwAbilityType, char* pInBuf, DWORD dwInLength, char* pOutBuf, DWORD dwOutLength)
-	panic("nonimplement")
-}
-
 type AlarmKind int
 
 func (cli *Client) Subscribe(kind AlarmKind, fn MesasgeCallBackFunc) error {
@@ -65,4 +58,28 @@ func (cli *Client) StopSubscribe() error {
 
 func (cli *Client) GetDVRConfig(cmd DVRGetSet, channel int) (interface{}, error) {
 	return GetDVRConfig(int(cli.LoginID), cmd, channel)
+}
+
+func (cli *Client) GetPTZCruise(channel, route int) (*NET_DVR_CRUISE_RET, error) {
+	return GetPTZCruise(int(cli.LoginID), channel, route)
+}
+
+func (cli *Client) DeviceAbility(typ DeviceAbilityKind, in string) ([]byte, error) {
+	return GetDeviceAbility(int(cli.LoginID), typ, in)
+}
+
+func (cli *Client) SetDVRConfig(cmd DVRGetSet, channel int, val interface{}) error {
+	return SetDvrConfig(int(cli.LoginID), cmd, channel, val)
+}
+
+func (cli *Client) GetPtzPosition(channel int, posID int) (*NET_DVR_PTZPOS, error) {
+	return GetPtzPosition(int(cli.LoginID), channel, posID)
+}
+
+func (cli *Client) Capture(snap *NET_DVR_MANUALSNAP) (*NET_DVR_PLATE_RESULT, error) {
+	return DvrCapture(int(cli.LoginID), snap)
+}
+
+func (cli *Client) ContinuousShoot(snap *NET_DVR_SNAPCFG) error {
+	return ContinuousShoot(int(cli.LoginID), snap)
 }

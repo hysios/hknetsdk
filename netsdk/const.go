@@ -1,8 +1,9 @@
 package netsdk
 
 const (
-	MAX_NAMELEN           = 16  //DVR本地登陆名
-	MAX_RIGHT             = 32  //设备支持的权限（1-12表示本地权限，13-32表示远程权限）
+	MAX_NAMELEN           = 16 //DVR本地登陆名
+	MAX_RIGHT             = 32 //设备支持的权限（1-12表示本地权限，13-32表示远程权限）
+	MAX_CALIB_PT          = 6
 	NAME_LEN              = 32  //用户名长度
 	MIN_PASSWD_LEN        = 8   //最小密码长度
 	PASSWD_LEN            = 16  //密码长度
@@ -323,6 +324,7 @@ const (
 	MAX_NOTICE_PIC_NUM    = 6    //公告信息最大图片数量
 	MAX_DEV_NUMBER_LEN    = 32   //设备编号最大长度
 	LOCK_NAME_LEN         = 32   //锁名称
+	STREAM_ID_LEN         = 32
 
 	HOLIDAY_GROUP_NAME_LEN          = 32  //假日组名称长度
 	MAX_HOLIDAY_PLAN_NUM            = 16  //假日组最大假日计划数
@@ -3222,3 +3224,92 @@ const (
 	ItcRedlightPedestrianType     DWORD = 0x400000 //行人闯红灯触发
 	ItcNocomityPedestrianType     DWORD = 0x800000 //不礼让行人触发
 )
+
+const (
+	EXCEPTION_EXCHANGE                 = 0x8000 //用户交互时异常
+	EXCEPTION_AUDIOEXCHANGE            = 0x8001 //语音对讲异常
+	EXCEPTION_ALARM                    = 0x8002 //报警异常
+	EXCEPTION_PREVIEW                  = 0x8003 //网络预览异常
+	EXCEPTION_SERIAL                   = 0x8004 //透明通道异常
+	EXCEPTION_RECONNECT                = 0x8005 //预览时重连
+	EXCEPTION_ALARMRECONNECT           = 0x8006 //报警时重连
+	EXCEPTION_SERIALRECONNECT          = 0x8007 //透明通道重连
+	SERIAL_RECONNECTSUCCESS            = 0x8008 //透明通道重连成功
+	EXCEPTION_PLAYBACK                 = 0x8010 //回放异常
+	EXCEPTION_DISKFMT                  = 0x8011 //硬盘格式化
+	EXCEPTION_PASSIVEDECODE            = 0x8012 //被动解码异常
+	EXCEPTION_EMAILTEST                = 0x8013 //邮件测试异常
+	EXCEPTION_BACKUP                   = 0x8014 //备份异常
+	PREVIEW_RECONNECTSUCCESS           = 0x8015 //预览时重连成功
+	ALARM_RECONNECTSUCCESS             = 0x8016 //报警时重连成功
+	RESUME_EXCHANGE                    = 0x8017 //用户交互恢复
+	NETWORK_FLOWTEST_EXCEPTION         = 0x8018 //网络流量检测异常
+	EXCEPTION_PICPREVIEWRECONNECT      = 0x8019 //图片预览重连
+	PICPREVIEW_RECONNECTSUCCESS        = 0x8020 //图片预览重连成功
+	EXCEPTION_PICPREVIEW               = 0x8021 //图片预览异常
+	EXCEPTION_MAX_ALARM_INFO           = 0x8022 //报警信息缓存已达上限
+	EXCEPTION_LOST_ALARM               = 0x8023 //报警丢失
+	EXCEPTION_PASSIVETRANSRECONNECT    = 0x8024 //被动转码重连
+	PASSIVETRANS_RECONNECTSUCCESS      = 0x8025 //被动转码重连成功
+	EXCEPTION_PASSIVETRANS             = 0x8026 //被动转码异常
+	SUCCESS_PUSHDEVLOGON               = 0x8030 //推模式设备注册成功
+	EXCEPTION_RELOGIN                  = 0x8040 //用户重登陆
+	RELOGIN_SUCCESS                    = 0x8041 //用户重登陆成功
+	EXCEPTION_PASSIVEDECODE_RECONNNECT = 0x8042 //被动解码重连
+	EXCEPTION_CLUSTER_CS_ARMFAILED     = 0x8043 //集群报警异常
+
+	EXCEPTION_RELOGIN_FAILED                  = 0x8044 //重登陆失败，停止重登陆
+	EXCEPTION_PREVIEW_RECONNECT_CLOSED        = 0x8045 //关闭预览重连功能
+	EXCEPTION_ALARM_RECONNECT_CLOSED          = 0x8046 //关闭报警重连功能
+	EXCEPTION_SERIAL_RECONNECT_CLOSED         = 0x8047 //关闭透明通道重连功能
+	EXCEPTION_PIC_RECONNECT_CLOSED            = 0x8048 //关闭回显重连功能
+	EXCEPTION_PASSIVE_DECODE_RECONNECT_CLOSED = 0x8049 //关闭被动解码重连功能
+	EXCEPTION_PASSIVE_TRANS_RECONNECT_CLOSED  = 0x804a //关闭被动转码重连功能
+	EXCEPTION_VIDEO_DOWNLOAD                  = 0x804b // [add] by yangzheng 2019/11/09 录像下载异常
+)
+
+var excpetionMap = map[int]string{
+	EXCEPTION_EXCHANGE:                        "用户交互时异常",
+	EXCEPTION_AUDIOEXCHANGE:                   "语音对讲异常",
+	EXCEPTION_ALARM:                           "报警异常",
+	EXCEPTION_PREVIEW:                         "网络预览异常",
+	EXCEPTION_SERIAL:                          "透明通道异常",
+	EXCEPTION_RECONNECT:                       "预览时重连",
+	EXCEPTION_ALARMRECONNECT:                  "报警时重连",
+	EXCEPTION_SERIALRECONNECT:                 "透明通道重连",
+	SERIAL_RECONNECTSUCCESS:                   "透明通道重连成功",
+	EXCEPTION_PLAYBACK:                        "回放异常",
+	EXCEPTION_DISKFMT:                         "硬盘格式化",
+	EXCEPTION_PASSIVEDECODE:                   "被动解码异常",
+	EXCEPTION_EMAILTEST:                       "邮件测试异常",
+	EXCEPTION_BACKUP:                          "备份异常",
+	PREVIEW_RECONNECTSUCCESS:                  "预览时重连成功",
+	ALARM_RECONNECTSUCCESS:                    "报警时重连成功",
+	RESUME_EXCHANGE:                           "用户交互恢复",
+	NETWORK_FLOWTEST_EXCEPTION:                "网络流量检测异常",
+	EXCEPTION_PICPREVIEWRECONNECT:             "图片预览重连",
+	PICPREVIEW_RECONNECTSUCCESS:               "图片预览重连成功",
+	EXCEPTION_PICPREVIEW:                      "图片预览异常",
+	EXCEPTION_MAX_ALARM_INFO:                  "报警信息缓存已达上限",
+	EXCEPTION_LOST_ALARM:                      "报警丢失",
+	EXCEPTION_PASSIVETRANSRECONNECT:           "被动转码重连",
+	PASSIVETRANS_RECONNECTSUCCESS:             "被动转码重连成功",
+	EXCEPTION_PASSIVETRANS:                    "被动转码异常",
+	SUCCESS_PUSHDEVLOGON:                      "推模式设备注册成功",
+	EXCEPTION_RELOGIN:                         "用户重登陆",
+	RELOGIN_SUCCESS:                           "用户重登陆成功",
+	EXCEPTION_PASSIVEDECODE_RECONNNECT:        "被动解码重连",
+	EXCEPTION_CLUSTER_CS_ARMFAILED:            "集群报警异常",
+	EXCEPTION_RELOGIN_FAILED:                  "重登陆失败，停止重登陆",
+	EXCEPTION_PREVIEW_RECONNECT_CLOSED:        "关闭预览重连功能",
+	EXCEPTION_ALARM_RECONNECT_CLOSED:          "关闭报警重连功能",
+	EXCEPTION_SERIAL_RECONNECT_CLOSED:         "关闭透明通道重连功能",
+	EXCEPTION_PIC_RECONNECT_CLOSED:            "关闭回显重连功能",
+	EXCEPTION_PASSIVE_DECODE_RECONNECT_CLOSED: "关闭被动解码重连功能",
+	EXCEPTION_PASSIVE_TRANS_RECONNECT_CLOSED:  "关闭被动转码重连功能",
+	EXCEPTION_VIDEO_DOWNLOAD:                  "录像下载异常",
+}
+
+func ExceptionString(code int) string {
+	return excpetionMap[code]
+}
