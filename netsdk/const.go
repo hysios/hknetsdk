@@ -3313,3 +3313,21 @@ var excpetionMap = map[int]string{
 func ExceptionString(code int) string {
 	return excpetionMap[code]
 }
+
+type PlayState int
+
+const (
+	NetDvrPlaystart       PlayState = 1  //开始播放
+	NetDvrPlaystop        PlayState = 2  //停止播放
+	NetDvrPlaypause       PlayState = 3  //暂停播放
+	NetDvrPlayrestart     PlayState = 4  //恢复播放
+	NetDvrPlayfast        PlayState = 5  //快放
+	NetDvrPlayslow        PlayState = 6  //慢放
+	NetDvrPlaynormal      PlayState = 7  //正常速度
+	NetDvrPlayframe       PlayState = 8  //单帧放
+	NetDvrPlaystartaudio  PlayState = 9  //打开声音
+	NetDvrPlaystopaudio   PlayState = 10 //关闭声音
+	NetDvrPlayaudiovolume PlayState = 11 //调节音量
+	NetDvrPlaysetpos      PlayState = 12 //改变文件回放的进度
+	NetDvrPlaygetpos      PlayState = 13 //获取文件回放的进度
+)

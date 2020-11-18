@@ -426,3 +426,32 @@ func ContinuousShoot(userId int, snap *NET_DVR_SNAPCFG) error {
 
 	return Err(GetLastErrorN())
 }
+
+func DvrGetFileByTime(userId int, filename string, playCond *NET_DVR_PLAYCOND) (*Playbacker, error) {
+	r := C.NET_DVR_GetFileByTime_V40(C.int(userId), C.CString(filename), (*C.NET_DVR_PLAYCOND)(unsafe.Pointer(playCond)))
+	if r < 0 {
+		return nil, Err(GetLastErrorN())
+	}
+
+	return &Playbacker{handle: uint64(r)}, nil
+}
+
+func (playback *Playbacker) PlayBack(state PlayState) error {
+	r := C.NET_DVR_PlayBackControl_V40(C.int(playback.handle), C.uint(state), nil, 0, nil, nil)
+	if r > 0 {
+		return nil
+	}
+	return Err(GetLastErrorN())
+}
+
+func (playback *Playbacker) Stop() error {
+	r := C.NET_DVR_StopGetFile(C.int(playback.handle))
+	if r > 0 {
+		return nil
+	}
+	return Err(GetLastErrorN())
+}
+
+func (playback *Playbacker) Pos() int {
+	return int(C.NET_DVR_GetDownloadPos(C.int(playback.handle)))
+}

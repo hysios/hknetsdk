@@ -2,3 +2,5 @@ doc/
 demo/
 bin/
 images/
+
+output.*

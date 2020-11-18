@@ -317,6 +317,15 @@ type NET_DVR_SCENE_INFO struct {
 	ST_byRes2      [64]BYTE       //保留
 }
 
+type NET_DVR_TIME struct {
+	ST_dwYear   DWORD //年
+	ST_dwMonth  DWORD //月
+	ST_dwDay    DWORD //日
+	ST_dwHour   DWORD //时
+	ST_dwMinute DWORD //分
+	ST_dwSecond DWORD //秒
+}
+
 type NET_DVR_TIME_EX struct {
 	ST_wYear    WORD
 	ST_byMonth  BYTE
@@ -1113,4 +1122,18 @@ type NET_DVR_AID_ALARM_V41 struct {
 	ST_byRes                  [7]BYTE                          // 保留字节
 	ST_dwPlateSmallPicDataLen DWORD                            //车牌小图图片长度
 	ST_pPlateSmallImage       *BYTE                            // //指向车牌小图的指针
+}
+
+type NET_DVR_PLAYCOND struct {
+	ST_dwChannel           DWORD
+	ST_struStartTime       NET_DVR_TIME
+	ST_struStopTime        NET_DVR_TIME
+	ST_byDrawFrame         BYTE //0:不抽帧，1：抽帧
+	ST_byStreamType        BYTE //码流类型，0-主码流 1-子码流 2-码流三
+	ST_byStreamID          [STREAM_ID_LEN]BYTE
+	ST_byCourseFile        BYTE     //课程文件0-否，1-是
+	ST_byDownload          BYTE     //是否下载 0-否，1-是
+	ST_byOptimalStreamType BYTE     //是否按最优码流类型回放 0-否，1-是（对于双码流设备，某一段时间内的录像文件与指定码流类型不同，则返回实际码流类型的录像）
+	ST_byVODFileType       BYTE     // 下载录像文件，文件格式 0-PS码流格式，1-3GP格式
+	ST_byRes               [26]BYTE //保留
 }

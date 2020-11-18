@@ -60,3 +60,27 @@ func NTExV2Time(nt NET_DVR_TIME_V30) time.Time {
 		time.Local,
 	)
 }
+
+func NT2Time(nt NET_DVR_TIME) time.Time {
+	return time.Date(
+		int(nt.ST_dwYear),
+		time.Month(nt.ST_dwMonth),
+		int(nt.ST_dwDay),
+		int(nt.ST_dwHour),
+		int(nt.ST_dwMinute),
+		int(nt.ST_dwSecond),
+		0,
+		time.Local,
+	)
+}
+
+func Time2NT(t time.Time) NET_DVR_TIME {
+	return NET_DVR_TIME{
+		ST_dwYear:   uint32(t.Year()),
+		ST_dwMonth:  uint32(t.Month()),
+		ST_dwDay:    uint32(t.Day()),
+		ST_dwHour:   uint32(t.Hour()),
+		ST_dwMinute: uint32(t.Minute()),
+		ST_dwSecond: uint32(t.Second()),
+	}
+}

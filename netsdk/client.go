@@ -83,3 +83,11 @@ func (cli *Client) Capture(snap *NET_DVR_MANUALSNAP) (*NET_DVR_PLATE_RESULT, err
 func (cli *Client) ContinuousShoot(snap *NET_DVR_SNAPCFG) error {
 	return ContinuousShoot(int(cli.LoginID), snap)
 }
+
+func (cli *Client) GetFileByTime(filename string, filecond *NET_DVR_PLAYCOND) (*Playbacker, error) {
+	return DvrGetFileByTime(int(cli.LoginID), filename, filecond)
+}
+
+type Playbacker struct {
+	handle uint64
+}
