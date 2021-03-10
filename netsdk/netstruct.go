@@ -20,6 +20,43 @@ type (
 	HWND  = uint32
 )
 
+const (
+	MAX_REGION_NUM = 8 // 区域列表最
+	MAX_TPS_RULE   = 8 // 最大参数规则
+	MAX_AID_RULE   = 8 // 最大事件规则数
+	MAX_LANE_NUM   = 8 // 最大车道数目
+)
+
+const (
+	VCA_MAX_POLYGON_POINT_NUM = 10 //检测区域最多支持10个点的多边形
+	MAX_RULE_NUM              = 8  //最多规则条数
+	MAX_RULE_NUM_V42          = 16 //最多规则条数扩展
+	MAX_TARGET_NUM            = 30 //最多目标个数
+	// MAX_CALIB_PT                   = 6    //最大标定点个数
+	MIN_CALIB_PT            = 4  //最小标定点个数
+	MAX_TIMESEGMENT_2       = 2  //最大时间段数
+	DATA_INDEX_LEN          = 64 //数据流水号
+	MAX_DEV_DATAINDEX_LEN   = 64 //设备数据流水号
+	MAX_TRAFFIC_PICTURE_NUM = 8  //交通图片数量
+	// MAX_LICENSE_LEN                = 16   //车牌号最大长度
+	MAX_LICENSE_LEN_EX             = 32   //车牌号最大长度
+	MAX_CARDNO_LEN                 = 48   //卡号最大长度 2013-11-04
+	MAX_OPERATE_INDEX_LEN          = 32   //操作数最大长度2014-03-03
+	MAX_PLATE_NUM                  = 3    //车牌个数
+	MAX_MASK_REGION_NUM            = 4    //最多四个屏蔽区域
+	MAX_SEGMENT_NUM                = 6    //摄像机标定最大样本线数目
+	MIN_SEGMENT_NUM                = 3    //摄像机标定最小样本线数目
+	MAX_REL_SNAPCHAN_NUM           = 3    //最大关联抓图通道数
+	MAX_PIC_SWITCH_STORAGE_SERVER  = 64   //云存储服务器存储的最大图片类型数
+	MAX_INFO_SWITCH_STORAGE_SERVER = 64   //云存储服务器存储的最大附加信息类型数
+	RTMP_URL_LEN                   = 128  //RTMP URL 长度
+	MAX_ID_LEN_128                 = 128  //发布文件ID长度
+	MAX_DEBUGCMD_LEN               = 1024 //设备调试命令最大长度
+	MAX_DEBUGINFO_LEN              = 1400 //设备调试信息最大长度
+	MAX_VEHICLE_ID_LEN             = 32   //最大车辆标识长度
+	LEN_PROPERTY                   = 128
+)
+
 type DeviceAbilityKind int
 
 const (
@@ -1136,4 +1173,82 @@ type NET_DVR_PLAYCOND struct {
 	ST_byOptimalStreamType BYTE     //是否按最优码流类型回放 0-否，1-是（对于双码流设备，某一段时间内的录像文件与指定码流类型不同，则返回实际码流类型的录像）
 	ST_byVODFileType       BYTE     // 下载录像文件，文件格式 0-PS码流格式，1-3GP格式
 	ST_byRes               [26]BYTE //保留
+}
+
+type NET_VCA_SIZE_FILTER struct {
+	ST_byActive     BYTE         //是否激活尺
+	ST_byMode       BYTE         //过滤器模式SIZE_
+	ST_byRes        [2]BYTE      //保留，置0
+	ST_struMiniRect NET_VCA_RECT //最小目标
+	ST_struMaxRect  NET_VCA_RECT //最大目标
+}
+
+//多边型结构体
+type NET_VCA_POLYGON struct {
+	ST_dwPointNum DWORD                                    //有效点 大于等于3，若是3点在一条线上认为是无效区域，线交叉认为是无效区域
+	ST_struPos    [VCA_MAX_POLYGON_POINT_NUM]NET_VCA_POINT //多边形边界点,最多十个
+}
+
+type NET_DVR_AID_PARAM struct {
+	ST_wParkingDuration       WORD     // 违停检测灵敏度  10-120s
+	ST_wPedestrianDuration    WORD     // 行人持续时间    1-120s
+	ST_wDebrisDuration        WORD     // 抛洒物持续时间  10-120s
+	ST_wCongestionLength      WORD     // 拥堵长度阈值    5-200（米）
+	ST_wCongestionDuration    WORD     // 拥堵持续参数    10-120s
+	ST_wInverseDuration       WORD     // 逆行持续时间    1-10s
+	ST_wInverseDistance       WORD     // 逆行距离阈值 单位m 范围[2-100] 默认 10米
+	ST_wInverseAngleTolerance WORD     // 允许角度偏差 90-180度,车流与逆行允许的夹角
+	ST_wIllegalParkingTime    WORD     // 违停时间[4,60]，单位：分钟 ,TFS(交通违章取证) 城市模式下
+	ST_wIllegalParkingPicNum  WORD     // 违停图片数量[1,6], TFS(交通违章取证) 城市模式下
+	ST_byMergePic             BYTE     // 图片拼接,TFS 城市模式下 0- 不拼接 1- 拼接
+	ST_byRes1                 [23]BYTE // 保留字节
+}
+
+type NET_DVR_SCHEDTIME struct {
+	//开始时间
+	ST_byStartHour BYTE
+	ST_byStartMin  BYTE
+	//结束时间
+	ST_byStopHour BYTE
+	ST_byStopMin  BYTE
+}
+
+type NET_DVR_HANDLEEXCEPTION_V30 struct {
+	ST_dwHandleType DWORD /*处理方式,处理方式的"或"结果*/
+	/*0x00: 无响应*/
+	/*0x01: 监视器上警告*/
+	/*0x02: 声音警告*/
+	/*0x04: 上传中心*/
+	/*0x08: 触发报警输出*/
+	/*0x10: 触发JPRG抓图并上传Email*/
+	/*0x20: 无线声光报警器联动*/
+	/*0x40: 联动电子地图(目前只有PCNVR支持)*/
+	/*0x200: 抓图并上传FTP*/
+	/*0x2000:短信报警*/
+	byRelAlarmOut [MAX_ALARMOUT_V30]BYTE
+	//报警触发的输出通道,报警触发的输出,为1表示触发该输出
+}
+
+// 单条交通事件规则结构体
+type NET_DVR_ONE_AID_RULE struct {
+	ST_byEnable        BYTE                                           // 是否启用事件规则
+	ST_byRes1          [3]BYTE                                        // 保留字节
+	ST_byRuleName      [NAME_LEN]BYTE                                 // 规则名称
+	ST_dwEventType     DWORD                                          // 交通事件检测类型 TRAFFIC_AID_TYPE
+	ST_struSizeFilter  NET_VCA_SIZE_FILTER                            // 尺寸过滤器
+	ST_struPolygon     NET_VCA_POLYGON                                // 规则区域
+	ST_struAIDParam    NET_DVR_AID_PARAM                              //  事件参数
+	ST_struAlarmTime   [MAX_DAYS][MAX_TIMESEGMENT_2]NET_DVR_SCHEDTIME //布防时间
+	ST_struHandleType  NET_DVR_HANDLEEXCEPTION_V30                    //处理方式
+	ST_byRelRecordChan [MAX_CHANNUM_V30]BYTE                          //报警触发的录象通道,为1表示触发该通道
+	ST_byRes2          [20]BYTE
+}
+
+type NET_DVR_AID_RULECFG struct {
+	ST_dwSize           DWORD            // 结构体大小
+	ST_byPicProType     BYTE             //报警时图片处理方式 0-不处理 非0-上传
+	ST_byRes1           [3]BYTE          // 保留字节
+	ST_struPictureParam NET_DVR_JPEGPARA //图片规格结构
+	ST_struOneAIDRule   [MAX_AID_RULE]NET_DVR_ONE_AID_RULE
+	ST_byRes2           [32]BYTE
 }

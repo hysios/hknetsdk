@@ -40,6 +40,8 @@ func (cli *Client) Subscribe(kind AlarmKind, fn MesasgeCallBackFunc) error {
 		ST_dwSize:            uint32(unsafe.Sizeof(NET_DVR_SETUPALARM_PARAM{})),
 		ST_byAlarmInfoType:   1,
 		ST_byRetAlarmTypeV40: 1,
+		ST_byLevel:           1,
+		ST_byDeployType:      1,
 	}
 
 	handle, err := SetSetupAlarmChan(int(cli.LoginID), &param)

@@ -274,6 +274,26 @@ func GetDVRConfig(loginId int, cmd DVRGetSet, channel int) (interface{}, error) 
 			return nil, Err(GetLastErrorN())
 		}
 		return &cfg, nil
+	case NetDvrGetAidRulecfg:
+		var (
+			cfg NET_DVR_AID_RULECFG
+			l   uint
+		)
+		b := C.NET_DVR_GetDVRConfig(C.int(loginId), C.uint(cmd), C.int(channel), C.LPVOID(unsafe.Pointer(&cfg)), C.uint(unsafe.Sizeof(cfg)), (*C.uint)(unsafe.Pointer(&l)))
+		if b == 0 {
+			return nil, Err(GetLastErrorN())
+		}
+		return &cfg, nil
+	case NetDvrGetAidRulecfgV41:
+		var (
+			cfg NET_DVR_AID_ALARM_V41
+			l   uint
+		)
+		b := C.NET_DVR_GetDVRConfig(C.int(loginId), C.uint(cmd), C.int(channel), C.LPVOID(unsafe.Pointer(&cfg)), C.uint(unsafe.Sizeof(cfg)), (*C.uint)(unsafe.Pointer(&l)))
+		if b == 0 {
+			return nil, Err(GetLastErrorN())
+		}
+		return &cfg, nil
 	default:
 		return nil, errors.New("nonimplement")
 	}
@@ -380,7 +400,7 @@ func GetPTZCruise(userId int, channel, route int) (*NET_DVR_CRUISE_RET, error) {
 
 func GetDeviceAbility(userId int, typ DeviceAbilityKind, in string) ([]byte, error) {
 	var (
-		buf      = make([]byte, 10*1024)
+		buf      = make([]byte, 100*1024)
 		rlen int = len(buf)
 		r    C.BOOL
 	)

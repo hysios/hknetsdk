@@ -25,20 +25,15 @@ import (
 )
 
 var (
-	addr     = flag.String("addr", "", "connect address")
-	user     = flag.String("user", "", "login username")
-	password = flag.String("pass", "", "login password")
+	addr     = flag.String("addr", "192.168.1.64:8000", "connect address")
+	user     = flag.String("user", "admin", "login username")
+	password = flag.String("pass", "adm89679005", "login password")
 	channel  = flag.Int("channel", 1, "channel")
 	route    = flag.Int("route", 1, "route")
+	cfgFile  = flag.String("cfgfile", "config.cfg", "config file")
 
 	// deviceFile = flag.String("input", "", "devices file")
 )
-
-func init() {
-	flag.Set("addr", "192.168.1.64:8000")
-	flag.Set("pass", "adm89679005")
-	flag.Set("user", "admin")
-}
 
 var safeStateMap = map[netsdk.BYTE]string{
 	0: "未知",
@@ -135,8 +130,47 @@ func main() {
 			devicecfg.ST_byTrackMode = 2
 			log.Println(client.SetDVRConfig(netsdk.NetDvrSetTrackParamcfg, 1, devicecfg))
 		}
-
 	}
+
+	cfg, err = client.DVRConfig(netsdk.NetDvrGetAidRulecfgV41, 1)
+	if err != nil {
+		log.Printf("get dvr AidRulecfg error %s", err)
+	} else {
+		if devicecfg, ok := cfg.(*netsdk.NET_DVR_AID_RULECFG); ok {
+			pp.Printf("Dvr AidRulecfg %s", devicecfg)
+
+			// log.Println(client.SetDVRConfig(netsdk.NetDvrSetTrackParamcfg, 1, devicecfg))
+		}
+	}
+	abilities, err := netsdk.GetDeviceAbility(int(client.LoginID), netsdk.DADeviceSofthardware, "")
+	if err != nil {
+		log.Printf("GetDeviceAbility error %s", err)
+	}
+	log.Printf("DeviceSofthardware abilities %s", abilities)
+
+	const alibxml = `<?xml version="1.0" encoding="utf-8"?>
+<!--req, 获取智能交通摄像机或者智能终端能力时pInBuf参数描述-->
+<!--req, ITCAbility节点中的能力针对抓拍机；ITSAbility节点中的能力针对终端-->
+<ITDeviceAbility version="2.0">
+  <channelNO>
+    1<!--req, xs:inter,通道号-->
+  </channelNO>
+  <!--opt,可以指定节点返回-->
+  <ITCAbility/>
+  <!--opt,指定返回节点-->
+</ITDeviceAbility>`
+	abilities, err = netsdk.GetDeviceAbility(int(client.LoginID), netsdk.DADeviceInfo, alibxml)
+	if err != nil {
+		log.Printf("GetDeviceAbility error %s", err)
+	}
+	log.Printf("DADeviceInfo abilities %s", abilities)
+	// if len(*cfgFile) > 0 {
+	// 	b, err := client.ConfigFile()
+	// 	if err != nil {
+	// 		log.Fatalf("get device config file error %s", err)
+	// 	}
+	// 	ioutil.WriteFile(*cfgFile, b, os.ModePerm)
+	// }
 
 	go func() {
 		time.Sleep(3 * time.Second)
@@ -191,7 +225,7 @@ func main() {
 
 	// log.Printf("ITC_POST_HVT_PARAM_V50 % #v", pretty.Formatter(cfg.ST_struTriggerParam.NET_ITC_POST_HVT_PARAM_V50()))
 
-	if err := client.Subscribe(0, func(cmd netsdk.CommAlarm, cli *netsdk.Client, alarm *netsdk.NET_DVR_ALARMER, info interface{}) {
+	if err := client.Subscribe(1, func(cmd netsdk.CommAlarm, cli *netsdk.Client, alarm *netsdk.NET_DVR_ALARMER, info interface{}) {
 		log.Printf("cmd 0x%0x", cmd)
 		log.Printf("SerialNumber %s", string(alarm.ST_sSerialNumber[:]))
 		log.Printf("DeviceNo %s", string(alarm.ST_sDeviceName[:]))
